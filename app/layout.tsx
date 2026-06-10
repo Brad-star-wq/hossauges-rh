@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { fontDisplay, fontBody, fontMono } from "./fonts";
-import { Nav } from "@/components/nav";
-import { Footer } from "@/components/footer";
 
 export const metadata: Metadata = {
   title: {
@@ -23,11 +21,7 @@ export default function RootLayout({
       lang="en"
       className={`${fontDisplay.variable} ${fontBody.variable} ${fontMono.variable} h-full`}
     >
-      <body className="flex min-h-full flex-col font-body">
-        <Nav />
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </body>
+      <body className="min-h-full font-body">{children}</body>
     </html>
   );
 }
