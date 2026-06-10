@@ -1,26 +1,117 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ── Design system — "Modern Americana Butcher" (SPEC §2) ────────────── */
+@theme {
+  /* Color tokens — ember is rationed (CTAs, sold-out, ticker, hover only) */
+  --color-cream: #f7f3ea; /* page background */
+  --color-paper: #fffdf7; /* cards / raised surfaces */
+  --color-navy: #2c4a66; /* primary (logo badge) */
+  --color-navy-deep: #1e3349; /* footers, dark sections, hero overlay */
+  --color-ember: #e2552c; /* accent (logo orange-red) */
+  --color-smoke: #6b7280; /* secondary text */
+  --color-char: #20242b; /* body text on cream */
+  --color-sage-wash: #e8ebe4; /* alt section background */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Fonts — next/font sets --font-display/body/mono on <html>.
+   Exposed as utilities here (distinct names avoid a self-referential var). */
+@utility font-display {
+  font-family: var(--font-display), "Arial Narrow", sans-serif;
+}
+@utility font-body {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+@utility font-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Page container default: max-w-6xl, px-5 */
+@utility container {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 72rem;
+  padding-inline: 1.25rem;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────── */
+body {
+  background: var(--color-cream);
+  color: var(--color-char);
+  font-family: var(--font-body);
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Visible focus ring — 2px ember, offset */
+:focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--color-ember);
+  color: var(--color-cream);
+}
+
+/* Subtle paper grain (~3% opacity) on cream sections.
+   Pseudo-element overlay so it never tints content or catches clicks. */
+.paper-grain {
+  position: relative;
+  isolation: isolate;
+}
+.paper-grain::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── Marquee ticker (pure CSS, pauses on hover) ──────────────────────── */
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ticker-track {
+  animation: ticker-scroll 40s linear infinite;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* ── Sold-out stamp thump-in ─────────────────────────────────────────── */
+@keyframes stamp-in {
+  0% {
+    transform: rotate(-8deg) scale(2.4);
+    opacity: 0;
+  }
+  60% {
+    transform: rotate(-8deg) scale(0.92);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-8deg) scale(1);
+    opacity: 1;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Reduced motion: collapse animations to near-instant */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .ticker-track {
+    animation: none !important;
+  }
 }

@@ -1,65 +1,112 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Hero } from "@/components/hero";
+import { Section } from "@/components/section";
+import { Eyebrow } from "@/components/eyebrow";
+import { Button } from "@/components/button";
+import { DropBoard } from "@/components/drop-board";
+import { Ticker } from "@/components/ticker";
+import { HowItWorks } from "@/components/how-it-works";
+import { NotifyStrip } from "@/components/notify-strip";
+import { Placeholder } from "@/components/placeholder";
+import {
+  activeDrop,
+  allTimeFlavorNames,
+  merchItems,
+  formatPrice,
+} from "@/lib/mock";
 
-export default function Home() {
+export default function HomePage() {
+  const teaserMerch = merchItems.filter((m) => m.active).slice(0, 3);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <Hero />
+
+      {/* Condensed Drop Board */}
+      <Section className="paper-grain">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <Eyebrow>This week</Eyebrow>
+            <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
+              On the board
+            </h2>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div className="mt-8 max-w-3xl">
+          <DropBoard drop={activeDrop} variant="condensed" />
         </div>
-      </main>
-    </div>
+      </Section>
+
+      {/* Flavor ticker — every flavor ever made */}
+      <Ticker items={allTimeFlavorNames} />
+
+      {/* How it works */}
+      <HowItWorks />
+
+      {/* Merch teaser */}
+      <Section className="paper-grain">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <Eyebrow>Wear the brand</Eyebrow>
+            <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
+              Merch
+            </h2>
+          </div>
+          <Button href="/merch" variant="secondary">
+            Shop all
+          </Button>
+        </div>
+        <ul className="mt-8 grid grid-cols-2 gap-5 md:grid-cols-3">
+          {teaserMerch.map((item) => (
+            <li key={item.id}>
+              <Link href="/merch" className="group block">
+                <div className="overflow-hidden border border-navy/15">
+                  <Placeholder
+                    label="Merch photo"
+                    ratio="4/5"
+                    tone="cream"
+                    className="transition-transform duration-300 group-hover:scale-[1.03]"
+                  />
+                </div>
+                <p className="font-display mt-3 text-lg font-bold uppercase leading-tight text-navy">
+                  {item.name}
+                </p>
+                <p className="font-mono text-sm text-smoke">
+                  {formatPrice(item.price_cents)}
+                </p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      {/* Story teaser */}
+      <section className="bg-sage-wash">
+        <Section as="div" className="!py-0">
+          <div className="grid items-center gap-10 py-16 sm:py-24 md:grid-cols-2">
+            <Placeholder label="Story photo" ratio="4/3" tone="navy" />
+            <div>
+              <Eyebrow>Our story</Eyebrow>
+              <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
+                Made by hand, by two friends.
+              </h2>
+              <p className="mt-4 max-w-prose text-char">
+                We started Hossauges in 2024 in Columbia, SC, grinding and
+                smoking about a hundred pounds a week. Every drop is small,
+                hands-on, and a little experimental.
+              </p>
+              <div className="mt-6">
+                <Button href="/about" variant="secondary">
+                  Our story
+                </Button>
+              </div>
+            </div>
+          </div>
+        </Section>
+      </section>
+
+      {/* Notify strip */}
+      <NotifyStrip />
+    </>
   );
 }
