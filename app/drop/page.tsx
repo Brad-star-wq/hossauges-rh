@@ -4,13 +4,16 @@ import { Button } from "@/components/button";
 import { DropBoard } from "@/components/drop-board";
 import { ReserveForm } from "@/components/reserve-form";
 import { NotifyStrip } from "@/components/notify-strip";
-import { currentDrop } from "@/lib/mock";
+import { getActiveDrop } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "This Week's Drop" };
+export const revalidate = 60;
 
-export default function DropPage() {
-  // Empty state — no active drop (flip `currentDrop` in lib/mock.ts to test).
-  if (!currentDrop) {
+export default async function DropPage() {
+  const drop = await getActiveDrop();
+
+  // Empty state — no active drop.
+  if (!drop) {
     return (
       <>
         <section className="paper-grain">
@@ -36,23 +39,21 @@ export default function DropPage() {
   }
 
   return (
-    <>
-      <section className="paper-grain">
-        <div className="container py-16 sm:py-24">
-          <Eyebrow>This week</Eyebrow>
-          <h1 className="font-display mt-4 text-5xl font-extrabold uppercase leading-[0.95] text-navy sm:text-7xl">
-            The Drop
-          </h1>
-          <p className="mt-4 max-w-md text-lg text-char">
-            Two flavors, packs of three. Reserve below — pickup in Columbia.
-          </p>
+    <section className="paper-grain">
+      <div className="container py-16 sm:py-24">
+        <Eyebrow>This week</Eyebrow>
+        <h1 className="font-display mt-4 text-5xl font-extrabold uppercase leading-[0.95] text-navy sm:text-7xl">
+          The Drop
+        </h1>
+        <p className="mt-4 max-w-md text-lg text-char">
+          Two flavors, packs of three. Reserve below — pickup in Columbia.
+        </p>
 
-          <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
-            <DropBoard drop={currentDrop} variant="full" />
-            <ReserveForm flavors={currentDrop.flavors} />
-          </div>
+        <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
+          <DropBoard drop={drop} variant="full" />
+          <ReserveForm flavors={drop.flavors} />
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }

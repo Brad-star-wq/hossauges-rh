@@ -5,7 +5,7 @@ import type {
   MerchItem,
   ArchiveFlavor,
   MeatType,
-} from "@/lib/mock";
+} from "@/lib/types";
 
 // Typed read helpers for the public site (Session 6 swaps the mock imports for
 // these). All run through the anon client and rely on the RLS read policies.

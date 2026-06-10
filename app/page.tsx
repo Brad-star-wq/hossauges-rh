@@ -8,77 +8,86 @@ import { Ticker } from "@/components/ticker";
 import { HowItWorks } from "@/components/how-it-works";
 import { NotifyStrip } from "@/components/notify-strip";
 import { Placeholder } from "@/components/placeholder";
-import {
-  activeDrop,
-  allTimeFlavorNames,
-  merchItems,
-  formatPrice,
-} from "@/lib/mock";
+import { getActiveDrop, getArchiveFlavors, getMerch } from "@/lib/queries";
+import { formatPrice } from "@/lib/types";
 
-export default function HomePage() {
-  const teaserMerch = merchItems.filter((m) => m.active).slice(0, 3);
+export const revalidate = 60;
+
+export default async function HomePage() {
+  const [drop, archive, merch] = await Promise.all([
+    getActiveDrop(),
+    getArchiveFlavors(),
+    getMerch(),
+  ]);
+
+  const tickerItems = archive.map((f) => f.name);
+  const teaserMerch = merch.slice(0, 3);
 
   return (
     <>
       <Hero />
 
-      {/* Condensed Drop Board */}
-      <Section className="paper-grain">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Eyebrow>This week</Eyebrow>
-            <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
-              On the board
-            </h2>
+      {/* Condensed Drop Board (only when a drop is live) */}
+      {drop && (
+        <Section className="paper-grain">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <Eyebrow>This week</Eyebrow>
+              <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
+                On the board
+              </h2>
+            </div>
           </div>
-        </div>
-        <div className="mt-8 max-w-3xl">
-          <DropBoard drop={activeDrop} variant="condensed" />
-        </div>
-      </Section>
+          <div className="mt-8 max-w-3xl">
+            <DropBoard drop={drop} variant="condensed" />
+          </div>
+        </Section>
+      )}
 
       {/* Flavor ticker — every flavor ever made */}
-      <Ticker items={allTimeFlavorNames} />
+      {tickerItems.length > 0 && <Ticker items={tickerItems} />}
 
       {/* How it works */}
       <HowItWorks />
 
       {/* Merch teaser */}
-      <Section className="paper-grain">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <Eyebrow>Wear the brand</Eyebrow>
-            <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
-              Merch
-            </h2>
+      {teaserMerch.length > 0 && (
+        <Section className="paper-grain">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <Eyebrow>Wear the brand</Eyebrow>
+              <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
+                Merch
+              </h2>
+            </div>
+            <Button href="/merch" variant="secondary">
+              Shop all
+            </Button>
           </div>
-          <Button href="/merch" variant="secondary">
-            Shop all
-          </Button>
-        </div>
-        <ul className="mt-8 grid grid-cols-2 gap-5 md:grid-cols-3">
-          {teaserMerch.map((item) => (
-            <li key={item.id}>
-              <Link href="/merch" className="group block">
-                <div className="overflow-hidden border border-navy/15">
-                  <Placeholder
-                    label="Merch photo"
-                    ratio="4/5"
-                    tone="cream"
-                    className="transition-transform duration-300 group-hover:scale-[1.03]"
-                  />
-                </div>
-                <p className="font-display mt-3 text-lg font-bold uppercase leading-tight text-navy">
-                  {item.name}
-                </p>
-                <p className="font-mono text-sm text-smoke">
-                  {formatPrice(item.price_cents)}
-                </p>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Section>
+          <ul className="mt-8 grid grid-cols-2 gap-5 md:grid-cols-3">
+            {teaserMerch.map((item) => (
+              <li key={item.id}>
+                <Link href="/merch" className="group block">
+                  <div className="overflow-hidden border border-navy/15">
+                    <Placeholder
+                      label="Merch photo"
+                      ratio="4/5"
+                      tone="cream"
+                      className="transition-transform duration-300 group-hover:scale-[1.03]"
+                    />
+                  </div>
+                  <p className="font-display mt-3 text-lg font-bold uppercase leading-tight text-navy">
+                    {item.name}
+                  </p>
+                  <p className="font-mono text-sm text-smoke">
+                    {formatPrice(item.price_cents)}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       {/* Story teaser */}
       <section className="bg-sage-wash">

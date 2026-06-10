@@ -1,46 +1,8 @@
-// Mock data for Sessions 2–4. Shapes mirror the future Supabase schema (SPEC §5)
-// so swapping in real queries (Session 6) is a drop-in. Prices are in cents;
+// Seed data only (Session 5 seed script). The public app reads from the DB via
+// lib/queries.ts; types and helpers live in lib/types.ts. Prices are in cents;
 // a null price renders as "$—" (TBD), matching the brisket in CLAUDE.md.
 
-export type MeatType = "pork" | "beef_pork";
-
-export type DropFlavor = {
-  id: string;
-  drop_id: string;
-  name: string;
-  meat_type: MeatType;
-  description: string;
-  price_cents: number | null;
-  sold_out: boolean;
-  photo_url: string | null;
-  votes: number;
-};
-
-export type Drop = {
-  id: string;
-  week_label: string;
-  status: "active" | "archived";
-  flavors: DropFlavor[];
-};
-
-export type MerchItem = {
-  id: string;
-  name: string;
-  price_cents: number;
-  sizes_note: string;
-  photo_url: string | null;
-  square_link: string;
-  active: boolean;
-  sort: number;
-};
-
-/** A deduped archive entry: how a flavor appears on /flavors. */
-export type ArchiveFlavor = {
-  name: string;
-  meat_type: MeatType;
-  made_count: number;
-  votes: number;
-};
+import type { Drop, MerchItem, ArchiveFlavor } from "@/lib/types";
 
 // ── Active drop — "WEEK OF JUNE 9" ──────────────────────────────────────
 export const activeDrop: Drop = {
@@ -103,9 +65,6 @@ export const archiveFlavors: ArchiveFlavor[] = [
   { name: "Korean Beef Bulgogi", meat_type: "beef_pork", made_count: 3, votes: 38 },
 ];
 
-/** Every flavor name ever made — for the marquee ticker. */
-export const allTimeFlavorNames: string[] = archiveFlavors.map((f) => f.name);
-
 // ── Merch (3 active + 1 inactive to verify the active filter, Session 4) ─
 export const merchItems: MerchItem[] = [
   {
@@ -149,13 +108,3 @@ export const merchItems: MerchItem[] = [
     sort: 3,
   },
 ];
-
-/** Format cents as a price string; null → "$—". */
-export function formatPrice(cents: number | null): string {
-  if (cents === null) return "$—";
-  return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
-}
-
-export function meatTypeLabel(meat: MeatType): string {
-  return meat === "pork" ? "100% PORK" : "BEEF & PORK";
-}

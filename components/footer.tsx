@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { NotifyForm } from "@/components/notify-form";
 
 const LINKS = [
   { href: "/drop", label: "Drop" },
@@ -33,28 +34,12 @@ export function Footer() {
 
         {/* Notify-me (visual only this session) + nav */}
         <div className="flex flex-col gap-8">
-          <form className="flex flex-col gap-3" aria-label="Get drop alerts">
-            <label
-              htmlFor="footer-notify"
-              className="font-mono text-xs uppercase tracking-[0.18em] text-cream/80"
-            >
+          <div className="flex flex-col gap-3">
+            <p className="font-mono text-xs uppercase tracking-[0.18em] text-cream/80">
               Get drop alerts
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="footer-notify"
-                type="email"
-                placeholder="you@email.com"
-                className="min-w-0 flex-1 border border-cream/30 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus-visible:border-ember"
-              />
-              <button
-                type="button"
-                className="font-mono shrink-0 bg-ember px-5 py-3 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-cream hover:text-navy-deep"
-              >
-                Notify me
-              </button>
-            </div>
-          </form>
+            </p>
+            <NotifyForm />
+          </div>
 
           <nav aria-label="Footer">
             <ul className="flex flex-wrap gap-6">

@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
 import { Eyebrow } from "@/components/eyebrow";
 import { Placeholder } from "@/components/placeholder";
-import { merchItems, formatPrice } from "@/lib/mock";
+import { getMerch } from "@/lib/queries";
+import { formatPrice } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Merch" };
+export const revalidate = 60;
 
-export default function MerchPage() {
-  // Only active items render (Square / the dashboard toggle hides the rest).
-  const items = merchItems
-    .filter((m) => m.active)
-    .sort((a, b) => a.sort - b.sort);
+export default async function MerchPage() {
+  // getMerch returns active items only (RLS also enforces this), sorted.
+  const items = await getMerch();
 
   return (
     <div className="paper-grain">

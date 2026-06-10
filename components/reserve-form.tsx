@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
-import { type DropFlavor } from "@/lib/mock";
+import { reserveSubmit } from "@/app/actions";
+import { type DropFlavor } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -19,8 +20,9 @@ function isValidContact(value: string): boolean {
 }
 
 /**
- * Reserve form — UI only this session. Client-side validation + designed
- * success state; the server action lands in Session 6.
+ * Reserve form. Client-side validation for fast feedback, then the
+ * reserveSubmit server action is authoritative (re-checks sold-out etc.).
+ * Renders the action's typed result inline — never throws.
  */
 export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
   const selectable = flavors.filter((f) => !f.sold_out);
@@ -30,7 +32,9 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
   const [flavorId, setFlavorId] = useState(selectable[0]?.id ?? "");
   const [qty, setQty] = useState(1);
   const [errors, setErrors] = useState<Errors>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   function validate(): Errors {
     const next: Errors = {};
@@ -45,9 +49,25 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setFormError(null);
     const next = validate();
     setErrors(next);
-    if (Object.keys(next).length === 0) setSubmitted(true);
+    if (Object.keys(next).length > 0) return;
+
+    startTransition(async () => {
+      const res = await reserveSubmit({ name, contact, flavorId, quantity: qty });
+      if (res.ok) {
+        setSubmitted(true);
+        return;
+      }
+      // Surface server-side field errors (e.g. sold-out caught server-side).
+      setErrors({
+        name: res.fieldErrors?.name,
+        contact: res.fieldErrors?.contact,
+        flavor: res.fieldErrors?.flavor,
+      });
+      setFormError(res.message);
+    });
   }
 
   function setQtyClamped(v: number) {
@@ -194,11 +214,18 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
           </div>
         </div>
 
+        {formError && (
+          <p role="alert" className={errCls}>
+            {formError}
+          </p>
+        )}
+
         <button
           type="submit"
-          className="font-mono mt-2 w-full bg-ember px-6 py-4 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy"
+          disabled={pending}
+          className="font-mono mt-2 w-full bg-ember px-6 py-4 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy disabled:opacity-60"
         >
-          Reserve my packs
+          {pending ? "Reserving…" : "Reserve my packs"}
         </button>
       </div>
     </form>

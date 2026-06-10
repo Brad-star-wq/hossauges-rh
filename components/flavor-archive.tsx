@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, useTransition } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { type ArchiveFlavor, type MeatType } from "@/lib/mock";
+import { voteFlavor } from "@/app/actions";
+import { type ArchiveFlavor, type MeatType } from "@/lib/types";
 import { StarStripeDivider } from "@/components/star-stripe-divider";
 import { cn } from "@/lib/cn";
 
@@ -28,18 +29,32 @@ function FlavorCard({ flavor }: { flavor: ArchiveFlavor }) {
   const reduceMotion = useReducedMotion();
   const persistedVote = useHasVoted(flavor.name);
   const [justVoted, setJustVoted] = useState(false);
+  const [, startTransition] = useTransition();
 
   const voted = persistedVote || justVoted;
-  const votes = flavor.votes + (justVoted ? 1 : 0); // optimistic; real persistence in Session 6
+  const votes = flavor.votes + (justVoted ? 1 : 0); // optimistic; reconciles on revalidate
 
   function vote() {
     if (voted) return;
+    // Optimistic + localStorage de-dupe, then persist via the server action.
     try {
       localStorage.setItem(VOTE_KEY(flavor.name), "1");
     } catch {
       /* ignore storage failures */
     }
     setJustVoted(true);
+    startTransition(async () => {
+      const res = await voteFlavor({ name: flavor.name });
+      if (!res.ok) {
+        // Roll back so the user can try again.
+        try {
+          localStorage.removeItem(VOTE_KEY(flavor.name));
+        } catch {
+          /* ignore */
+        }
+        setJustVoted(false);
+      }
+    });
   }
 
   return (

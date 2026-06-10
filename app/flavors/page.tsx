@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Eyebrow } from "@/components/eyebrow";
 import { FlavorArchive } from "@/components/flavor-archive";
-import { archiveFlavors } from "@/lib/mock";
+import { getArchiveFlavors } from "@/lib/queries";
 
 export const metadata: Metadata = { title: "Flavor Archive" };
+export const revalidate = 60;
 
-export default function FlavorsPage() {
+export default async function FlavorsPage() {
+  const flavors = await getArchiveFlavors();
+
   return (
     <div className="paper-grain">
       <section className="container py-16 sm:py-24">
@@ -19,7 +22,13 @@ export default function FlavorsPage() {
         </p>
 
         <div className="mt-12">
-          <FlavorArchive flavors={archiveFlavors} />
+          {flavors.length === 0 ? (
+            <p className="font-display text-3xl font-extrabold uppercase text-smoke">
+              No flavors archived yet.
+            </p>
+          ) : (
+            <FlavorArchive flavors={flavors} />
+          )}
         </div>
       </section>
     </div>

@@ -9,7 +9,7 @@ import {
   type DropFlavor,
   formatPrice,
   meatTypeLabel,
-} from "@/lib/mock";
+} from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 /** Compact flavor tag for the condensed (home) board. */
