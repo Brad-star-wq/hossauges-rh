@@ -56,14 +56,14 @@ export function NotifyForm({ className }: { className?: string }) {
           placeholder="you@email.com"
           aria-invalid={result ? !result.ok : undefined}
           className={cn(
-            "min-w-0 flex-1 border bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40",
+            "min-w-0 flex-1 border bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/60",
             result && !result.ok ? "border-ember" : "border-cream/30 focus-visible:border-ember",
           )}
         />
         <button
           type="submit"
           disabled={pending}
-          className="font-mono shrink-0 bg-ember px-5 py-3 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-cream hover:text-navy disabled:opacity-60"
+          className="font-mono shrink-0 bg-ember-press px-5 py-3 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-cream hover:text-navy disabled:opacity-60"
         >
           {pending ? "…" : "Notify me"}
         </button>

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx scripts/seed.ts",
+    "reset": "tsx scripts/reset.ts",
     "verify:rls": "tsx scripts/verify-rls.ts",
     "verify:reserve": "tsx scripts/verify-reserve.ts"
   },

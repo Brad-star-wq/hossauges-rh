@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { EASE } from "@/lib/motion";
 import { Placeholder } from "@/components/placeholder";
 
 // Real process order — the sequence (and its numbering) is earned.
@@ -25,7 +26,7 @@ export function ProcessStrip() {
             hidden: { opacity: 0, y: reduceMotion ? 0 : 24 },
             show: { opacity: 1, y: 0 },
           }}
-          transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }}
+          transition={{ duration: 0.45, ease: EASE }}
         >
           <Placeholder label={`${step} photo`} ratio="1/1" tone="navy" />
           <p className="font-mono mt-3 text-xs uppercase tracking-[0.2em] text-navy">

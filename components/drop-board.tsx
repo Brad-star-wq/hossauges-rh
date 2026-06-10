@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { EASE } from "@/lib/motion";
 import { Stamp } from "@/components/stamp";
 import { Placeholder } from "@/components/placeholder";
 import { Button } from "@/components/button";
@@ -43,9 +44,9 @@ function FullFlavor({ flavor }: { flavor: DropFlavor }) {
         <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-ember">
           {meatTypeLabel(flavor.meat_type)}
         </p>
-        <h3 className="font-display mt-2 text-3xl font-extrabold uppercase leading-[0.95] tracking-[0.01em] text-navy sm:text-4xl">
+        <h2 className="font-display mt-2 text-3xl font-extrabold uppercase leading-[0.95] tracking-[0.01em] text-navy sm:text-4xl">
           {flavor.name}
-        </h3>
+        </h2>
         <p className="mt-3 max-w-prose text-char">{flavor.description}</p>
         <p className="font-mono mt-4 text-base text-char">
           {formatPrice(flavor.price_cents)}{" "}
@@ -82,7 +83,7 @@ export function DropBoard({
       viewport={{ once: true, amount: 0.3 }}
       transition={{
         duration: reduceMotion ? 0.3 : 0.7,
-        ease: [0.2, 0.8, 0.2, 1],
+        ease: EASE,
       }}
     >
       {/* Date-stamp header */}

@@ -2,6 +2,7 @@
 
 import { useState, useSyncExternalStore, useTransition } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { EASE } from "@/lib/motion";
 import { voteFlavor } from "@/app/actions";
 import { type ArchiveFlavor, type MeatType } from "@/lib/types";
 import { StarStripeDivider } from "@/components/star-stripe-divider";
@@ -64,7 +65,7 @@ function FlavorCard({ flavor }: { flavor: ArchiveFlavor }) {
         hidden: { opacity: 0, y: reduceMotion ? 0 : 24 },
         show: { opacity: 1, y: 0 },
       }}
-      transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }}
+      transition={{ duration: 0.45, ease: EASE }}
     >
       <div>
         <span className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-ember">

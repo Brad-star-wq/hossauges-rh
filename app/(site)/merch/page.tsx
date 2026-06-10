@@ -4,7 +4,10 @@ import { Placeholder } from "@/components/placeholder";
 import { getMerch } from "@/lib/queries";
 import { formatPrice } from "@/lib/types";
 
-export const metadata: Metadata = { title: "Merch" };
+export const metadata: Metadata = {
+  title: "Merch",
+  description: "Hossauges hats, tees, and hoodies. Checkout handled securely by Square.",
+};
 export const revalidate = 60;
 
 export default async function MerchPage() {
@@ -54,7 +57,7 @@ export default async function MerchPage() {
                       href={item.square_link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="font-mono mt-4 inline-flex items-center justify-center bg-ember px-5 py-3 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy"
+                      className="font-mono mt-4 inline-flex items-center justify-center bg-ember-press px-5 py-3 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy"
                     >
                       Buy
                     </a>

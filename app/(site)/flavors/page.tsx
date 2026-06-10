@@ -3,7 +3,11 @@ import { Eyebrow } from "@/components/eyebrow";
 import { FlavorArchive } from "@/components/flavor-archive";
 import { getArchiveFlavors } from "@/lib/queries";
 
-export const metadata: Metadata = { title: "Flavor Archive" };
+export const metadata: Metadata = {
+  title: "Flavor Archive",
+  description:
+    "Every Hossauges sausage flavor we've ever smoked. Vote your favorites back onto the board.",
+};
 export const revalidate = 60;
 
 export default async function FlavorsPage() {

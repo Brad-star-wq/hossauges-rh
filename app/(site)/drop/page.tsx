@@ -6,7 +6,11 @@ import { ReserveForm } from "@/components/reserve-form";
 import { NotifyStrip } from "@/components/notify-strip";
 import { getActiveDrop } from "@/lib/queries";
 
-export const metadata: Metadata = { title: "This Week's Drop" };
+export const metadata: Metadata = {
+  title: "This Week's Drop",
+  description:
+    "This week's two small-batch sausage flavors. Reserve your 3-packs for pickup in Columbia, SC.",
+};
 export const revalidate = 60;
 
 export default async function DropPage() {

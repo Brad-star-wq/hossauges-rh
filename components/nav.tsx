@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { EASE } from "@/lib/motion";
 import { cn } from "@/lib/cn";
 
 const LINKS = [
@@ -122,7 +123,7 @@ export function Nav() {
                     hidden: { opacity: 0, y: reduceMotion ? 0 : 16 },
                     show: { opacity: 1, y: 0 },
                   }}
-                  transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+                  transition={{ duration: 0.4, ease: EASE }}
                 >
                   <Link
                     href={link.href}

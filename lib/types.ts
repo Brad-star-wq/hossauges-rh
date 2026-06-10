@@ -1,5 +1,15 @@
-// Shared domain types + pure display helpers. The public app imports from here
-// (not lib/mock.ts, which now only feeds the seed script).
+// Shared domain types + pure display helpers + site constants. The public app
+// imports from here (not lib/mock.ts, which now only feeds the seed script).
+
+/** Canonical site URL — override with NEXT_PUBLIC_SITE_URL in Vercel. */
+export const SITE_URL = (
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://hossauges.com"
+).replace(/\/$/, "");
+export const SITE_NAME = "Hossauges";
+export const SITE_TAGLINE = "Small-batch sausage, Columbia SC";
+export const SITE_DESCRIPTION =
+  "Small-batch custom sausage from Columbia, SC. New flavors drop weekly — reserve your packs.";
+
 
 export type MeatType = "pork" | "beef_pork";
 

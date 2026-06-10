@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { EASE } from "@/lib/motion";
 import { Button } from "@/components/button";
 
 const LINES = [["Small-batch", "sausage."], ["Columbia,", "SC."]];
@@ -19,7 +20,7 @@ export function Hero() {
     show: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.6, ease: [0.2, 0.8, 0.2, 1] },
+      transition: { duration: 0.6, ease: EASE },
     },
   };
 
@@ -31,7 +32,7 @@ export function Hero() {
         aria-label="Hero photo — dark grill"
         className="absolute inset-0 bg-navy-deep"
       >
-        <span className="font-mono absolute bottom-4 right-4 text-[0.6rem] uppercase tracking-[0.25em] text-cream/30">
+        <span className="font-mono absolute bottom-4 right-4 text-[0.6rem] uppercase tracking-[0.25em] text-cream/70">
           Hero photo
         </span>
       </div>
@@ -81,7 +82,7 @@ export function Hero() {
 
       {/* Scroll hint */}
       <motion.span
-        className="font-mono absolute bottom-6 left-1/2 -translate-x-1/2 text-[0.6rem] uppercase tracking-[0.3em] text-cream/60"
+        className="font-mono absolute bottom-6 left-1/2 -translate-x-1/2 text-[0.6rem] uppercase tracking-[0.3em] text-cream/75"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: reduceMotion ? 0 : 1.1, duration: 0.6 }}

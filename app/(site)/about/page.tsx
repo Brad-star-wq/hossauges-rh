@@ -5,7 +5,11 @@ import { Placeholder } from "@/components/placeholder";
 import { Section } from "@/components/section";
 import { ProcessStrip } from "@/components/process-strip";
 
-export const metadata: Metadata = { title: "About" };
+export const metadata: Metadata = {
+  title: "About",
+  description:
+    "Two friends making about a hundred pounds of small-batch sausage a week in Columbia, SC, since 2024.",
+};
 
 export default function AboutPage() {
   return (

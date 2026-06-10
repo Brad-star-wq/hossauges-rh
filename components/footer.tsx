@@ -60,10 +60,10 @@ export function Footer() {
 
       <div className="border-t border-cream/15">
         <div className="container flex flex-col gap-2 py-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-cream/60">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-cream/75">
             Est. 2024 — Columbia, SC
           </p>
-          <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-cream/40">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.22em] text-cream/75">
             © {/* static label, no date dependency */}Hossauges
           </p>
         </div>

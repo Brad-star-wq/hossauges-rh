@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { EASE } from "@/lib/motion";
 import { Eyebrow } from "@/components/eyebrow";
 
 const STEPS = [
@@ -33,7 +34,7 @@ export function HowItWorks() {
                 hidden: { opacity: 0, y: reduceMotion ? 0 : 24 },
                 show: { opacity: 1, y: 0 },
               }}
-              transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+              transition={{ duration: 0.5, ease: EASE }}
             >
               <span className="font-mono text-xs uppercase tracking-[0.22em] text-ember">
                 {step.n} / {step.label}

@@ -7,8 +7,9 @@
   --color-paper: #fffdf7; /* cards / raised surfaces */
   --color-navy: #2c4a66; /* primary (logo badge) */
   --color-navy-deep: #1e3349; /* footers, dark sections, hero overlay */
-  --color-ember: #e2552c; /* accent (logo orange-red) */
-  --color-smoke: #6b7280; /* secondary text */
+  --color-ember: #e2552c; /* accent (logo orange-red) — stamps, ticker, dots, borders, hovers */
+  --color-ember-press: #c2410c; /* accessible action shade (AA with cream text) — button bg + small ember text on light */
+  --color-smoke: #565d68; /* secondary text — darkened to clear AA (4.5:1) on cream/sage */
   --color-char: #20242b; /* body text on cream */
   --color-sage-wash: #e8ebe4; /* alt section background */
 }

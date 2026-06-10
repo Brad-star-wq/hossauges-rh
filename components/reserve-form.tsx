@@ -107,9 +107,9 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
       aria-label="Reserve your packs"
       className="border border-navy/20 bg-paper p-6 sm:p-8"
     >
-      <h3 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
+      <h2 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
         Reserve your packs
-      </h3>
+      </h2>
       <p className="mt-2 text-sm text-smoke">
         No payment now — we&apos;ll confirm pickup with you directly.
       </p>
@@ -223,7 +223,7 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
         <button
           type="submit"
           disabled={pending}
-          className="font-mono mt-2 w-full bg-ember px-6 py-4 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy disabled:opacity-60"
+          className="font-mono mt-2 w-full bg-ember-press px-6 py-4 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy disabled:opacity-60"
         >
           {pending ? "Reserving…" : "Reserve my packs"}
         </button>
