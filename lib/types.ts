@@ -21,7 +21,8 @@ export type DropFlavor = {
   description: string;
   price_cents: number | null;
   sold_out: boolean;
-  photo_url: string | null;
+  photo_url: string | null; // legacy "first photo"; superseded by photos[]
+  photos: string[]; // ordered photo urls (migration 004); [0] is the thumbnail
   votes: number;
 };
 
@@ -57,6 +58,22 @@ export type GalleryItem = {
   url: string;
   sort: number;
 };
+
+// ── Pre-order pop-up (Round 5) — separate from the weekly batch ──────────────
+export type PreorderItem = {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  sort: number;
+};
+
+export type Preorder = {
+  enabled: boolean;
+  title: string;
+  items: PreorderItem[];
+};
+
+export const PREORDER_MAX_ITEMS = 9;
 
 /** Editable single fields (site_content key/value store). */
 export type SiteContent = {

@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Drop, MerchItem, DropFlavor, GalleryItem } from "@/lib/types";
+import type { Drop, MerchItem, DropFlavor, GalleryItem, PreorderItem } from "@/lib/types";
 
 // Service-role reads for the dashboard (see all data, incl. inactive merch and
 // the no-public-read tables). Only ever called from authed admin pages.
@@ -17,12 +17,61 @@ export async function getActiveDropAdmin(): Promise<Drop | null> {
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
+
+  type Row = Omit<DropFlavor, "photos">;
+  const flavors: DropFlavor[] = ((data.drop_flavors ?? []) as Row[]).map((f) => ({
+    ...f,
+    photos: f.photo_url ? [f.photo_url] : [],
+  }));
+
+  // Attach all photos (migration 004). Falls back to photo_url if table missing.
+  const { data: photos } = await supabaseAdmin
+    .from("flavor_photos")
+    .select("flavor_id, url, sort")
+    .in("flavor_id", flavors.map((f) => f.id))
+    .order("sort", { ascending: true });
+  if (photos) {
+    const byFlavor = new Map<string, string[]>();
+    for (const r of photos as { flavor_id: string; url: string }[]) {
+      const list = byFlavor.get(r.flavor_id) ?? [];
+      list.push(r.url);
+      byFlavor.set(r.flavor_id, list);
+    }
+    for (const f of flavors) {
+      const urls = byFlavor.get(f.id);
+      if (urls?.length) {
+        f.photos = urls;
+        f.photo_url = urls[0];
+      }
+    }
+  }
+
   return {
     id: data.id,
     week_label: data.week_label,
     status: data.status,
-    flavors: (data.drop_flavors ?? []) as DropFlavor[],
+    flavors,
   };
+}
+
+export type FlavorPhoto = { id: string; url: string };
+
+/** Photo rows (with ids, for editing) keyed by flavor id. */
+export async function getFlavorPhotos(
+  flavorIds: string[],
+): Promise<Record<string, FlavorPhoto[]>> {
+  const out: Record<string, FlavorPhoto[]> = {};
+  if (flavorIds.length === 0) return out;
+  const { data, error } = await supabaseAdmin
+    .from("flavor_photos")
+    .select("id, url, flavor_id, sort")
+    .in("flavor_id", flavorIds)
+    .order("sort", { ascending: true });
+  if (error || !data) return out; // table missing (pre-migration) → empty
+  for (const r of data as { id: string; url: string; flavor_id: string }[]) {
+    (out[r.flavor_id] ??= []).push({ id: r.id, url: r.url });
+  }
+  return out;
 }
 
 export async function getAllMerch(): Promise<MerchItem[]> {
@@ -115,6 +164,43 @@ export async function getGalleryAll(): Promise<GalleryItem[]> {
     .order("sort", { ascending: true });
   if (error || !data) return [];
   return data as GalleryItem[];
+}
+
+// ── Pre-order pop-up ──────────────────────────────────────────────────────────
+export async function getPreorderConfig(): Promise<{ enabled: boolean; title: string }> {
+  const { data } = await supabaseAdmin
+    .from("preorder_popup")
+    .select("enabled, title")
+    .eq("id", 1)
+    .maybeSingle();
+  return { enabled: data?.enabled ?? false, title: data?.title ?? "" };
+}
+
+export async function getPreorderItemsAdmin(): Promise<PreorderItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("preorder_items")
+    .select("id, name, photo_url, sort")
+    .order("sort", { ascending: true });
+  if (error || !data) return [];
+  return data as PreorderItem[];
+}
+
+export type PreorderSignup = {
+  id: string;
+  name: string;
+  contact: string;
+  items: string | null;
+  contacted: boolean;
+  created_at: string;
+};
+
+export async function getPreorderSignups(): Promise<PreorderSignup[]> {
+  const { data, error } = await supabaseAdmin
+    .from("preorder_signups")
+    .select("id, name, contact, items, contacted, created_at")
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data as PreorderSignup[];
 }
 
 export async function getEmailList(): Promise<string[]> {

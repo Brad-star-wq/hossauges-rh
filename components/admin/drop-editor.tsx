@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveDrop, publishNewDrop, type FlavorInput } from "@/app/admin/actions";
-import { PhotoUpload } from "@/components/admin/photo-upload";
+import { FlavorPhotos } from "@/components/admin/flavor-photos";
 import { type Drop, type MeatType } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
@@ -15,7 +15,6 @@ type EditFlavor = {
   description: string;
   priceDollars: string;
   sold_out: boolean;
-  photo_url: string | null;
 };
 
 function toDollars(cents: number | null): string {
@@ -37,11 +36,16 @@ function emptyFlavor(): EditFlavor {
     description: "",
     priceDollars: "",
     sold_out: false,
-    photo_url: null,
   };
 }
 
-export function DropEditor({ drop }: { drop: Drop }) {
+export function DropEditor({
+  drop,
+  photosByFlavor,
+}: {
+  drop: Drop;
+  photosByFlavor: Record<string, { id: string; url: string }[]>;
+}) {
   const router = useRouter();
   const [weekLabel, setWeekLabel] = useState(drop.week_label);
   const [flavors, setFlavors] = useState<EditFlavor[]>(
@@ -53,7 +57,6 @@ export function DropEditor({ drop }: { drop: Drop }) {
       description: f.description,
       priceDollars: toDollars(f.price_cents),
       sold_out: f.sold_out,
-      photo_url: f.photo_url,
     })),
   );
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
@@ -86,13 +89,19 @@ export function DropEditor({ drop }: { drop: Drop }) {
         description: f.description,
         price_cents: toCents(f.priceDollars),
         sold_out: f.sold_out,
-        photo_url: f.photo_url,
       })),
     };
     startSave(async () => {
-      const res = await saveDrop(payload);
-      setResult(res);
-      if (res.ok) router.refresh(); // reload canonical ids for newly-inserted flavors
+      try {
+        const res = await saveDrop(payload);
+        setResult(res);
+        if (res.ok) router.refresh(); // reload canonical ids for newly-inserted flavors
+      } catch (err) {
+        setResult({
+          ok: false,
+          message: err instanceof Error ? `Save failed: ${err.message}` : "Save failed — server error.",
+        });
+      }
     });
   }
 
@@ -103,9 +112,16 @@ export function DropEditor({ drop }: { drop: Drop }) {
     if (!ok) return;
     setResult(null);
     startPublish(async () => {
-      const res = await publishNewDrop();
-      setResult(res);
-      if (res.ok) router.refresh();
+      try {
+        const res = await publishNewDrop();
+        setResult(res);
+        if (res.ok) router.refresh();
+      } catch (err) {
+        setResult({
+          ok: false,
+          message: err instanceof Error ? `Publish failed: ${err.message}` : "Publish failed — server error.",
+        });
+      }
     });
   }
 
@@ -202,15 +218,9 @@ export function DropEditor({ drop }: { drop: Drop }) {
             </div>
 
             <div>
-              <span className={labelCls}>Photo</span>
+              <span className={labelCls}>Photos</span>
               <div className="mt-1">
-                <PhotoUpload
-                  folder="flavors"
-                  value={f.photo_url}
-                  ratio="4/3"
-                  label="Flavor photo"
-                  onUploaded={(url) => patch(i, { photo_url: url })}
-                />
+                <FlavorPhotos flavorId={f.id} initial={photosByFlavor[f.id] ?? []} />
               </div>
             </div>
 

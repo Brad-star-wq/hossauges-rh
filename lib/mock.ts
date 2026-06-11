@@ -20,6 +20,7 @@ export const activeDrop: Drop = {
       price_cents: null, // "$—" — price TBD
       sold_out: true,
       photo_url: null,
+      photos: [],
       votes: 42,
     },
     {
@@ -32,6 +33,7 @@ export const activeDrop: Drop = {
       price_cents: 1800,
       sold_out: false,
       photo_url: null,
+      photos: [],
       votes: 31,
     },
   ],

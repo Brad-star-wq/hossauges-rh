@@ -7,6 +7,8 @@ import {
   type MeatType,
   type GalleryItem,
   type SiteContent,
+  type Preorder,
+  type PreorderItem,
   DEFAULT_SITE_CONTENT,
 } from "@/lib/types";
 
@@ -35,8 +37,39 @@ function toFlavor(row: FlavorRow): DropFlavor {
     price_cents: row.price_cents,
     sold_out: row.sold_out,
     photo_url: row.photo_url,
+    // Fallback: legacy single photo. attachFlavorPhotos() overrides this with
+    // the flavor_photos rows once migration 004 is applied.
+    photos: row.photo_url ? [row.photo_url] : [],
     votes: row.votes,
   };
+}
+
+/**
+ * Populate each flavor's `photos[]` from the flavor_photos table (migration
+ * 004). If the table doesn't exist yet, the legacy photo_url fallback stays.
+ */
+export async function attachFlavorPhotos(flavors: DropFlavor[]): Promise<void> {
+  if (flavors.length === 0) return;
+  const { data, error } = await supabase
+    .from("flavor_photos")
+    .select("flavor_id, url, sort")
+    .in("flavor_id", flavors.map((f) => f.id))
+    .order("sort", { ascending: true });
+  if (error || !data) return; // table missing → keep photo_url fallback
+
+  const byFlavor = new Map<string, string[]>();
+  for (const row of data as { flavor_id: string; url: string }[]) {
+    const list = byFlavor.get(row.flavor_id) ?? [];
+    list.push(row.url);
+    byFlavor.set(row.flavor_id, list);
+  }
+  for (const f of flavors) {
+    const urls = byFlavor.get(f.id);
+    if (urls && urls.length) {
+      f.photos = urls;
+      f.photo_url = urls[0];
+    }
+  }
 }
 
 /** The single active drop with its flavors, or null if none is published. */
@@ -54,11 +87,36 @@ export async function getActiveDrop(): Promise<Drop | null> {
   if (error) throw error;
   if (!data) return null;
 
-  return {
+  const drop: Drop = {
     id: data.id,
     week_label: data.week_label,
     status: data.status as "active" | "archived",
     flavors: ((data.drop_flavors ?? []) as FlavorRow[]).map(toFlavor),
+  };
+  await attachFlavorPhotos(drop.flavors);
+  return drop;
+}
+
+/** A single flavor (for the detail page) plus its drop's week label. */
+export async function getFlavorById(
+  id: string,
+): Promise<{ flavor: DropFlavor; weekLabel: string; isActive: boolean } | null> {
+  const { data, error } = await supabase
+    .from("drop_flavors")
+    .select(
+      "id, drop_id, name, meat_type, description, price_cents, sold_out, photo_url, votes, drops(week_label, status)",
+    )
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return null;
+
+  const flavor = toFlavor(data as FlavorRow);
+  await attachFlavorPhotos([flavor]);
+  const drop = (data as unknown as { drops: { week_label: string; status: string } | null }).drops;
+  return {
+    flavor,
+    weekLabel: drop?.week_label ?? "",
+    isActive: drop?.status === "active",
   };
 }
 
@@ -112,6 +170,25 @@ export async function getSiteContent(): Promise<SiteContent> {
     about_hero_url: map.get("about_hero_url") || DEFAULT_SITE_CONTENT.about_hero_url,
     about_paragraph:
       map.get("about_paragraph") || DEFAULT_SITE_CONTENT.about_paragraph,
+  };
+}
+
+/**
+ * Pre-order pop-up config + items. Falls back to disabled/empty if the tables
+ * don't exist yet (migration 005 not applied) so the homepage still renders.
+ */
+export async function getPreorder(): Promise<Preorder> {
+  const [configRes, itemsRes] = await Promise.all([
+    supabase.from("preorder_popup").select("enabled, title").eq("id", 1).maybeSingle(),
+    supabase.from("preorder_items").select("id, name, photo_url, sort").order("sort", { ascending: true }),
+  ]);
+  if (configRes.error || !configRes.data) {
+    return { enabled: false, title: "", items: [] };
+  }
+  return {
+    enabled: configRes.data.enabled,
+    title: configRes.data.title ?? "",
+    items: (itemsRes.data ?? []) as PreorderItem[],
   };
 }
 

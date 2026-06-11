@@ -1,6 +1,6 @@
 import { DropEditor } from "@/components/admin/drop-editor";
 import { PublishFirstDrop } from "@/components/admin/publish-first-drop";
-import { getActiveDropAdmin } from "@/lib/admin-queries";
+import { getActiveDropAdmin, getFlavorPhotos } from "@/lib/admin-queries";
 
 export default async function AdminDropPage() {
   const drop = await getActiveDropAdmin();
@@ -21,7 +21,15 @@ export default async function AdminDropPage() {
     );
   }
 
+  const photosByFlavor = await getFlavorPhotos(drop.flavors.map((f) => f.id));
+
   // Key by the flavor-id set so adding/removing flavors (then save → refresh)
   // remounts the editor with canonical ids instead of stale local state.
-  return <DropEditor key={drop.flavors.map((f) => f.id).join("-") || drop.id} drop={drop} />;
+  return (
+    <DropEditor
+      key={drop.flavors.map((f) => f.id).join("-") || drop.id}
+      drop={drop}
+      photosByFlavor={photosByFlavor}
+    />
+  );
 }

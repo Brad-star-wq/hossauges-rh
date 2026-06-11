@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin-session";
-import type { ActionResult, MeatType } from "@/lib/types";
+import { type ActionResult, type MeatType, PREORDER_MAX_ITEMS } from "@/lib/types";
 
 const DENIED: ActionResult = { ok: false, message: "Not authorized." };
 
@@ -23,7 +23,8 @@ export type FlavorInput = {
   description: string;
   price_cents: number | null;
   sold_out: boolean;
-  photo_url: string | null;
+  // photo_url is intentionally NOT here — flavor photos are managed by the
+  // add/delete/move flavor-photo actions so saveDrop never clobbers them.
 };
 
 export async function saveDrop(input: {
@@ -64,7 +65,6 @@ export async function saveDrop(input: {
         description: f.description.trim(),
         price_cents: f.price_cents,
         sold_out: f.sold_out,
-        photo_url: f.photo_url,
       };
       if (f.id && existingIds.has(f.id)) {
         const { error } = await supabaseAdmin.from("drop_flavors").update(row).eq("id", f.id);
@@ -81,7 +81,7 @@ export async function saveDrop(input: {
     return { ok: true, message: "Saved." };
   } catch (err) {
     console.error("[saveDrop]", err);
-    return { ok: false, message: "Couldn't save changes. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save changes. Try again." };
   }
 }
 
@@ -100,7 +100,7 @@ export async function toggleSoldOut(
     return { ok: true, message: soldOut ? "Marked sold out." : "Marked available." };
   } catch (err) {
     console.error("[toggleSoldOut]", err);
-    return { ok: false, message: "Couldn't update. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
   }
 }
 
@@ -134,7 +134,128 @@ export async function publishNewDrop(): Promise<ActionResult> {
     return { ok: true, message: "New batch published. Edit the flavor and add more." };
   } catch (err) {
     console.error("[publishNewDrop]", err);
-    return { ok: false, message: "Couldn't publish a new drop. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't publish a new drop. Try again." };
+  }
+}
+
+// ── Flavor photos (multiple per flavor, migration 004) ───────────────────────
+
+function revalidateFlavor(flavorId: string) {
+  revalidatePath(`/flavors/${flavorId}`);
+  revalidatePublic();
+}
+
+// Keep drop_flavors.photo_url in sync with the first flavor_photos row (legacy
+// "first photo" used by any code still reading photo_url).
+async function syncFlavorFirstPhoto(flavorId: string) {
+  const { data } = await supabaseAdmin
+    .from("flavor_photos")
+    .select("url")
+    .eq("flavor_id", flavorId)
+    .order("sort", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  await supabaseAdmin.from("drop_flavors").update({ photo_url: data?.url ?? null }).eq("id", flavorId);
+}
+
+export async function addFlavorPhoto(
+  formData: FormData,
+): Promise<ActionResult & { url?: string; id?: string }> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const file = formData.get("file");
+    const flavorId = String(formData.get("flavorId") ?? "");
+    if (!(file instanceof File) || file.size === 0) return { ok: false, message: "No image selected." };
+    if (!flavorId) return { ok: false, message: "Save the flavor first." };
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+    const path = `flavors/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("photos")
+      .upload(path, file, { contentType: file.type || "image/jpeg", upsert: true });
+    if (upErr) throw upErr;
+    const { data: pub } = supabaseAdmin.storage.from("photos").getPublicUrl(path);
+
+    const { data: last } = await supabaseAdmin
+      .from("flavor_photos")
+      .select("sort")
+      .eq("flavor_id", flavorId)
+      .order("sort", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { data: row, error: insErr } = await supabaseAdmin
+      .from("flavor_photos")
+      .insert({ flavor_id: flavorId, url: pub.publicUrl, sort: (last?.sort ?? -1) + 1 })
+      .select("id")
+      .single();
+    if (insErr) throw insErr;
+
+    await syncFlavorFirstPhoto(flavorId);
+    revalidateFlavor(flavorId);
+    return { ok: true, message: "Added.", url: pub.publicUrl, id: row.id };
+  } catch (err) {
+    console.error("[addFlavorPhoto]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Upload failed." };
+  }
+}
+
+export async function deleteFlavorPhoto(photoId: string): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: row } = await supabaseAdmin
+      .from("flavor_photos")
+      .select("flavor_id, url")
+      .eq("id", photoId)
+      .maybeSingle();
+    if (!row) return { ok: false, message: "Photo not found." };
+
+    const marker = "/photos/";
+    const idx = (row.url as string).indexOf(marker);
+    if (idx !== -1) {
+      await supabaseAdmin.storage.from("photos").remove([(row.url as string).slice(idx + marker.length)]);
+    }
+    const { error } = await supabaseAdmin.from("flavor_photos").delete().eq("id", photoId);
+    if (error) throw error;
+
+    await syncFlavorFirstPhoto(row.flavor_id as string);
+    revalidateFlavor(row.flavor_id as string);
+    return { ok: true, message: "Deleted." };
+  } catch (err) {
+    console.error("[deleteFlavorPhoto]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't delete. Try again." };
+  }
+}
+
+export async function moveFlavorPhoto(photoId: string, dir: "up" | "down"): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: target } = await supabaseAdmin
+      .from("flavor_photos")
+      .select("flavor_id")
+      .eq("id", photoId)
+      .maybeSingle();
+    if (!target) return { ok: false, message: "Photo not found." };
+
+    const { data: items } = await supabaseAdmin
+      .from("flavor_photos")
+      .select("id, sort")
+      .eq("flavor_id", target.flavor_id as string)
+      .order("sort", { ascending: true });
+    if (!items) return { ok: false, message: "Couldn't reorder." };
+
+    const i = items.findIndex((x) => x.id === photoId);
+    const j = dir === "up" ? i - 1 : i + 1;
+    if (i === -1 || j < 0 || j >= items.length) return { ok: true, message: "" };
+
+    await supabaseAdmin.from("flavor_photos").update({ sort: items[j].sort }).eq("id", items[i].id);
+    await supabaseAdmin.from("flavor_photos").update({ sort: items[i].sort }).eq("id", items[j].id);
+
+    await syncFlavorFirstPhoto(target.flavor_id as string);
+    revalidateFlavor(target.flavor_id as string);
+    return { ok: true, message: "Reordered." };
+  } catch (err) {
+    console.error("[moveFlavorPhoto]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't reorder. Try again." };
   }
 }
 
@@ -162,7 +283,7 @@ export async function uploadPhoto(
     return { ok: true, message: "Uploaded.", url: data.publicUrl };
   } catch (err) {
     console.error("[uploadPhoto]", err);
-    return { ok: false, message: "Upload failed. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Upload failed. Try again." };
   }
 }
 
@@ -196,14 +317,23 @@ export async function saveMerch(input: MerchInput): Promise<ActionResult> {
       const { error } = await supabaseAdmin.from("merch_items").update(row).eq("id", input.id);
       if (error) throw error;
     } else {
-      const { error } = await supabaseAdmin.from("merch_items").insert(row);
+      // Append new items at the end (sort = max + 1) instead of all sharing 0.
+      const { data: last } = await supabaseAdmin
+        .from("merch_items")
+        .select("sort")
+        .order("sort", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const { error } = await supabaseAdmin
+        .from("merch_items")
+        .insert({ ...row, sort: (last?.sort ?? -1) + 1 });
       if (error) throw error;
     }
     revalidatePublic();
     return { ok: true, message: "Saved." };
   } catch (err) {
     console.error("[saveMerch]", err);
-    return { ok: false, message: "Couldn't save the item. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save the item. Try again." };
   }
 }
 
@@ -216,7 +346,7 @@ export async function setMerchActive(id: string, active: boolean): Promise<Actio
     return { ok: true, message: active ? "Shown." : "Hidden." };
   } catch (err) {
     console.error("[setMerchActive]", err);
-    return { ok: false, message: "Couldn't update. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
   }
 }
 
@@ -229,7 +359,7 @@ export async function deleteMerch(id: string): Promise<ActionResult> {
     return { ok: true, message: "Deleted." };
   } catch (err) {
     console.error("[deleteMerch]", err);
-    return { ok: false, message: "Couldn't delete. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't delete. Try again." };
   }
 }
 
@@ -254,7 +384,7 @@ export async function saveSiteContent(key: string, value: string): Promise<Actio
     return { ok: true, message: "Saved." };
   } catch (err) {
     console.error("[saveSiteContent]", err);
-    return { ok: false, message: "Couldn't save. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save. Try again." };
   }
 }
 
@@ -298,7 +428,7 @@ export async function addGalleryItem(formData: FormData): Promise<ActionResult> 
     return { ok: true, message: "Added." };
   } catch (err) {
     console.error("[addGalleryItem]", err);
-    return { ok: false, message: "Upload failed. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Upload failed. Try again." };
   }
 }
 
@@ -326,7 +456,7 @@ export async function deleteGalleryItem(id: string): Promise<ActionResult> {
     return { ok: true, message: "Deleted." };
   } catch (err) {
     console.error("[deleteGalleryItem]", err);
-    return { ok: false, message: "Couldn't delete. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't delete. Try again." };
   }
 }
 
@@ -351,7 +481,7 @@ export async function moveGalleryItem(id: string, dir: "up" | "down"): Promise<A
     return { ok: true, message: "Reordered." };
   } catch (err) {
     console.error("[moveGalleryItem]", err);
-    return { ok: false, message: "Couldn't reorder. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't reorder. Try again." };
   }
 }
 
@@ -369,6 +499,186 @@ export async function markContacted(id: string, contacted: boolean): Promise<Act
     return { ok: true, message: contacted ? "Marked contacted." : "Marked not contacted." };
   } catch (err) {
     console.error("[markContacted]", err);
-    return { ok: false, message: "Couldn't update. Try again." };
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
+  }
+}
+
+// ── Pre-order pop-up (separate from the batch system) ─────────────────────────
+
+function revalidateHome() {
+  revalidatePath("/"); // live pop-up reads from the homepage
+}
+
+export async function setPreorderEnabled(enabled: boolean): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { error } = await supabaseAdmin
+      .from("preorder_popup")
+      .upsert({ id: 1, enabled, updated_at: new Date().toISOString() }, { onConflict: "id" });
+    if (error) throw error;
+    revalidateHome();
+    return { ok: true, message: enabled ? "Pop-up turned on." : "Pop-up turned off." };
+  } catch (err) {
+    console.error("[setPreorderEnabled]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
+  }
+}
+
+export async function setPreorderTitle(title: string): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { error } = await supabaseAdmin
+      .from("preorder_popup")
+      .upsert({ id: 1, title: title.trim(), updated_at: new Date().toISOString() }, { onConflict: "id" });
+    if (error) throw error;
+    revalidateHome();
+    return { ok: true, message: "Saved." };
+  } catch (err) {
+    console.error("[setPreorderTitle]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save. Try again." };
+  }
+}
+
+export async function addPreorderItem(
+  formData: FormData,
+): Promise<ActionResult & { id?: string }> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const name = String(formData.get("name") ?? "").trim();
+    if (!name) return { ok: false, message: "Give the item a name." };
+
+    // Cap at PREORDER_MAX_ITEMS.
+    const { count } = await supabaseAdmin
+      .from("preorder_items")
+      .select("id", { count: "exact", head: true });
+    if ((count ?? 0) >= PREORDER_MAX_ITEMS) {
+      return { ok: false, message: `That's the max of ${PREORDER_MAX_ITEMS} items.` };
+    }
+
+    let photoUrl: string | null = null;
+    const file = formData.get("file");
+    if (file instanceof File && file.size > 0) {
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+      const path = `preorder/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabaseAdmin.storage
+        .from("photos")
+        .upload(path, file, { contentType: file.type || "image/jpeg", upsert: true });
+      if (upErr) throw upErr;
+      photoUrl = supabaseAdmin.storage.from("photos").getPublicUrl(path).data.publicUrl;
+    }
+
+    const { data: last } = await supabaseAdmin
+      .from("preorder_items")
+      .select("sort")
+      .order("sort", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const { data: row, error: insErr } = await supabaseAdmin
+      .from("preorder_items")
+      .insert({ name, photo_url: photoUrl, sort: (last?.sort ?? -1) + 1 })
+      .select("id")
+      .single();
+    if (insErr) throw insErr;
+
+    revalidateHome();
+    return { ok: true, message: "Added.", id: row.id };
+  } catch (err) {
+    console.error("[addPreorderItem]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't add item. Try again." };
+  }
+}
+
+export async function updatePreorderItemName(id: string, name: string): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    if (!name.trim()) return { ok: false, message: "Give the item a name." };
+    const { error } = await supabaseAdmin
+      .from("preorder_items")
+      .update({ name: name.trim() })
+      .eq("id", id);
+    if (error) throw error;
+    revalidateHome();
+    return { ok: true, message: "Saved." };
+  } catch (err) {
+    console.error("[updatePreorderItemName]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save. Try again." };
+  }
+}
+
+export async function updatePreorderItemPhoto(id: string, url: string): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { error } = await supabaseAdmin
+      .from("preorder_items")
+      .update({ photo_url: url })
+      .eq("id", id);
+    if (error) throw error;
+    revalidateHome();
+    return { ok: true, message: "Photo updated." };
+  } catch (err) {
+    console.error("[updatePreorderItemPhoto]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save photo. Try again." };
+  }
+}
+
+export async function deletePreorderItem(id: string): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: row } = await supabaseAdmin
+      .from("preorder_items")
+      .select("photo_url")
+      .eq("id", id)
+      .maybeSingle();
+    if (row?.photo_url) {
+      const marker = "/photos/";
+      const idx = (row.photo_url as string).indexOf(marker);
+      if (idx !== -1) {
+        await supabaseAdmin.storage.from("photos").remove([(row.photo_url as string).slice(idx + marker.length)]);
+      }
+    }
+    const { error } = await supabaseAdmin.from("preorder_items").delete().eq("id", id);
+    if (error) throw error;
+    revalidateHome();
+    return { ok: true, message: "Deleted." };
+  } catch (err) {
+    console.error("[deletePreorderItem]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't delete. Try again." };
+  }
+}
+
+export async function movePreorderItem(id: string, dir: "up" | "down"): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: items } = await supabaseAdmin
+      .from("preorder_items")
+      .select("id, sort")
+      .order("sort", { ascending: true });
+    if (!items) return { ok: false, message: "Couldn't reorder." };
+    const i = items.findIndex((x) => x.id === id);
+    const j = dir === "up" ? i - 1 : i + 1;
+    if (i === -1 || j < 0 || j >= items.length) return { ok: true, message: "" };
+    await supabaseAdmin.from("preorder_items").update({ sort: items[j].sort }).eq("id", items[i].id);
+    await supabaseAdmin.from("preorder_items").update({ sort: items[i].sort }).eq("id", items[j].id);
+    revalidateHome();
+    return { ok: true, message: "Reordered." };
+  } catch (err) {
+    console.error("[movePreorderItem]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't reorder. Try again." };
+  }
+}
+
+export async function markPreorderContacted(id: string, contacted: boolean): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { error } = await supabaseAdmin
+      .from("preorder_signups")
+      .update({ contacted })
+      .eq("id", id);
+    if (error) throw error;
+    revalidatePath("/admin/preorder");
+    return { ok: true, message: contacted ? "Marked contacted." : "Marked not contacted." };
+  } catch (err) {
+    console.error("[markPreorderContacted]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
   }
 }

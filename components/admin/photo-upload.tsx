@@ -17,7 +17,7 @@ export function PhotoUpload({
   ratio = "4/3",
   label = "Photo",
 }: {
-  folder: "flavors" | "merch" | "hero";
+  folder: "flavors" | "merch" | "hero" | "preorder";
   value: string | null;
   onUploaded: (url: string) => void;
   ratio?: string;

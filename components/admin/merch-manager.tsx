@@ -54,9 +54,13 @@ function MerchForm({
       active,
     };
     start(async () => {
-      const res = await saveMerch(payload);
-      if (res.ok) onDone();
-      else setError(res.message);
+      try {
+        const res = await saveMerch(payload);
+        if (res.ok) onDone();
+        else setError(res.message);
+      } catch (err) {
+        setError(err instanceof Error ? `Save failed: ${err.message}` : "Save failed — server error.");
+      }
     });
   }
 
@@ -153,15 +157,25 @@ function MerchCard({ item, onEdit }: { item: MerchItem; onEdit: () => void }) {
 
   function hideToggle() {
     start(async () => {
-      await setMerchActive(item.id, !item.active);
-      router.refresh();
+      try {
+        const res = await setMerchActive(item.id, !item.active);
+        if (!res.ok) return window.alert(res.message);
+        router.refresh();
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : "Update failed.");
+      }
     });
   }
   function onDelete() {
     if (!window.confirm(`Delete "${item.name}"? This can't be undone.`)) return;
     start(async () => {
-      await deleteMerch(item.id);
-      router.refresh();
+      try {
+        const res = await deleteMerch(item.id);
+        if (!res.ok) return window.alert(res.message);
+        router.refresh();
+      } catch (err) {
+        window.alert(err instanceof Error ? err.message : "Delete failed.");
+      }
     });
   }
 
