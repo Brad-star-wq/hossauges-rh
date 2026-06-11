@@ -1,0 +1,8 @@
+# Netlify config. The official Next.js Runtime auto-installs on deploy and
+# handles SSR, ISR, server actions, and middleware — no publish dir needed here.
+[build]
+  command = "npm run build"
+
+[build.environment]
+  # Next 16 requires Node 20+. Netlify's default can be older, so pin it.
+  NODE_VERSION = "20"
