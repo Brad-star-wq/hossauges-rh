@@ -1,27 +1,38 @@
+import { cn } from "@/lib/cn";
+
 const STEPS = [
-  { label: "We post", detail: "Two flavors drop weekly" },
-  { label: "You reserve", detail: "Claim packs, no payment" },
-  { label: "You pick up", detail: "We confirm in Columbia" },
+  { label: "We post", detail: "Two new flavors drop every week." },
+  { label: "You reserve", detail: "Claim your packs — no payment up front." },
+  { label: "You pick up", detail: "We confirm a pickup time in Columbia." },
 ];
 
-/** Slim one-row "how it works" strip. */
-export function HowItWorks() {
+/** Bordered "How it works" box with numbered steps (homepage right column). */
+export function HowItWorks({ className }: { className?: string }) {
   return (
-    <section className="border-y border-navy/15 bg-sage-wash">
-      <ul className="container flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-center sm:gap-0">
-        {STEPS.map((step) => (
+    <div className={cn("flex h-full flex-col border-2 border-navy bg-cream p-6 sm:p-8", className)}>
+      <h2 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy sm:text-4xl">
+        How it works
+      </h2>
+      <ul className="mt-6 flex flex-col">
+        {STEPS.map((step, i) => (
           <li
             key={step.label}
-            className="flex items-baseline gap-2 sm:px-6 sm:[&:not(:first-child)]:border-l sm:[&:not(:first-child)]:border-navy/15"
+            className="flex gap-5 border-t border-navy/15 py-5 first:border-t-0 first:pt-0"
           >
-            <span aria-hidden className="size-1.5 self-center rounded-full bg-ember" />
-            <span className="font-mono text-sm font-medium uppercase tracking-[0.1em] text-navy">
-              {step.label}
+            <span className="font-mono text-2xl font-bold leading-none text-ember">
+              {String(i + 1).padStart(2, "0")}
             </span>
-            <span className="text-xs text-smoke">— {step.detail}</span>
+            <div>
+              <p className="font-mono text-sm font-bold uppercase tracking-[0.14em] text-navy">
+                {step.label}
+              </p>
+              <p className="font-mono mt-1.5 text-sm leading-relaxed text-smoke">
+                {step.detail}
+              </p>
+            </div>
           </li>
         ))}
       </ul>
-    </section>
+    </div>
   );
 }

@@ -19,22 +19,22 @@ const CONDENSED_CAP = 6;
 /** Compact menu row for the condensed (home) board — tight, no photo. */
 function CondensedRow({ flavor }: { flavor: DropFlavor }) {
   return (
-    <li className="flex items-center justify-between gap-3 border-t border-navy/15 py-3 first:border-t-0">
+    <li className="flex items-center justify-between gap-4 border-t border-navy/15 py-5 first:border-t-0">
       <div className="min-w-0">
-        <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-ember">
+        <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-ember">
           {meatTypeLabel(flavor.meat_type)}
         </p>
-        <p className="font-display truncate text-lg font-extrabold uppercase leading-tight tracking-[0.01em] text-navy">
+        <p className="font-display mt-1 text-xl font-extrabold uppercase leading-tight tracking-[0.01em] text-navy sm:text-2xl">
           {flavor.name}
         </p>
       </div>
       <div className="shrink-0 text-right">
         {flavor.sold_out ? (
-          <span className="font-mono inline-block border border-ember px-2 py-0.5 text-[0.6rem] uppercase tracking-[0.12em] text-ember">
+          <span className="font-mono inline-block border border-ember px-3 py-1.5 text-xs uppercase tracking-[0.14em] text-ember">
             Sold out
           </span>
         ) : (
-          <span className="font-mono text-sm text-char">
+          <span className="font-mono text-2xl font-bold text-navy">
             {formatPrice(flavor.price_cents)}
           </span>
         )}
@@ -48,7 +48,17 @@ function FullFlavor({ flavor }: { flavor: DropFlavor }) {
   return (
     <div className="grid gap-5 border border-navy/20 bg-cream p-5 sm:grid-cols-[1fr_1.2fr] sm:items-center">
       <div className="relative">
-        <Placeholder label="Flavor photo" ratio="4/3" tone="navy" />
+        {flavor.photos[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={flavor.photos[0]}
+            alt={flavor.name}
+            loading="lazy"
+            className="aspect-[4/3] w-full border border-navy/20 object-cover"
+          />
+        ) : (
+          <Placeholder label="Flavor photo" ratio="4/3" tone="navy" />
+        )}
         {flavor.sold_out && <Stamp />}
       </div>
       <div>
@@ -84,7 +94,7 @@ export function DropBoard({
     <motion.div
       className={cn(
         "paper-grain border-2 border-navy bg-paper shadow-[6px_6px_0_0_var(--color-navy)]",
-        condensed ? "p-4 sm:p-5" : "p-6 sm:p-8",
+        condensed ? "p-6 sm:p-8" : "p-6 sm:p-8",
         className,
       )}
       initial={{
@@ -118,9 +128,9 @@ export function DropBoard({
               + {drop.flavors.length - CONDENSED_CAP} more on the full batch
             </p>
           )}
-          <div className="mt-4">
-            <Button href="/drop" variant="primary">
-              See the full batch
+          <div className="mt-6">
+            <Button href="/drop" variant="primary" className="w-full py-4">
+              See the full batch →
             </Button>
           </div>
         </>

@@ -71,7 +71,7 @@ export function Hero({ photoUrl }: { photoUrl?: string | null }) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: reduceMotion ? 0 : 0.7, duration: 0.6 }}
         >
-          Two friends, a smoker, and a new pair of flavors every week.
+          Three friends, a smoker, and a new pair of flavors every week.
         </motion.p>
 
         <motion.div

@@ -9,7 +9,7 @@ import { getSiteContent, getGallery } from "@/lib/queries";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Two friends making about a hundred pounds of small-batch sausage a week in Columbia, SC, since 2024.",
+    "Three friends making about a hundred pounds of small-batch sausage a week in Columbia, SC, since 2024.",
 };
 export const revalidate = 60;
 
@@ -25,7 +25,7 @@ export default async function AboutPage() {
           <div className="mt-8 grid items-center gap-10 md:grid-cols-2">
             <div>
               <h1 className="font-display text-5xl font-extrabold uppercase leading-[0.95] text-navy sm:text-6xl">
-                Two friends, a smoker.
+                Three friends, a smoker.
               </h1>
               <p className="mt-5 max-w-prose text-lg text-char">
                 {content.about_paragraph}
