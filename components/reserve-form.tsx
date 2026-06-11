@@ -128,7 +128,7 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
             aria-invalid={!!errors.name}
             className={cn(fieldCls, errors.name && "border-ember")}
           />
-          {errors.name && <p className={errCls}>{errors.name}</p>}
+          {errors.name && <p role="alert" className={errCls}>{errors.name}</p>}
         </div>
 
         {/* Contact */}
@@ -146,7 +146,7 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
             aria-invalid={!!errors.contact}
             className={cn(fieldCls, errors.contact && "border-ember")}
           />
-          {errors.contact && <p className={errCls}>{errors.contact}</p>}
+          {errors.contact && <p role="alert" className={errCls}>{errors.contact}</p>}
         </div>
 
         {/* Flavor */}
@@ -173,7 +173,7 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
               </option>
             ))}
           </select>
-          {errors.flavor && <p className={errCls}>{errors.flavor}</p>}
+          {errors.flavor && <p role="alert" className={errCls}>{errors.flavor}</p>}
         </div>
 
         {/* Quantity stepper */}
