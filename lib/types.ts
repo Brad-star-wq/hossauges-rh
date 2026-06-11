@@ -51,6 +51,29 @@ export type ArchiveFlavor = {
   votes: number;
 };
 
+export type GalleryItem = {
+  id: string;
+  type: "photo" | "video";
+  url: string;
+  sort: number;
+};
+
+/** Editable single fields (site_content key/value store). */
+export type SiteContent = {
+  home_hero_url: string;
+  about_hero_url: string;
+  about_paragraph: string;
+};
+
+export const DEFAULT_ABOUT_PARAGRAPH =
+  "Hossauges started in 2024 in Columbia, SC. We make about a hundred pounds of small-batch sausage a week, two new flavors at a time. Everything is ground, stuffed, smoked, and packed by hand.";
+
+export const DEFAULT_SITE_CONTENT: SiteContent = {
+  home_hero_url: "",
+  about_hero_url: "",
+  about_paragraph: DEFAULT_ABOUT_PARAGRAPH,
+};
+
 /** Typed result every server action returns — forms render these, never throw. */
 export type ActionResult = {
   ok: boolean;

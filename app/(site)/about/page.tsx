@@ -3,15 +3,19 @@ import { Eyebrow } from "@/components/eyebrow";
 import { Button } from "@/components/button";
 import { Placeholder } from "@/components/placeholder";
 import { Section } from "@/components/section";
-import { ProcessStrip } from "@/components/process-strip";
+import { Gallery } from "@/components/gallery";
+import { getSiteContent, getGallery } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "About",
   description:
     "Two friends making about a hundred pounds of small-batch sausage a week in Columbia, SC, since 2024.",
 };
+export const revalidate = 60;
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [content, gallery] = await Promise.all([getSiteContent(), getGallery()]);
+
   return (
     <>
       {/* Story */}
@@ -24,27 +28,34 @@ export default function AboutPage() {
                 Two friends, a smoker.
               </h1>
               <p className="mt-5 max-w-prose text-lg text-char">
-                Hossauges started in 2024 in Columbia, SC. We make about a
-                hundred pounds of small-batch sausage a week, two new flavors at
-                a time. Everything is ground, stuffed, smoked, and packed by
-                hand.
+                {content.about_paragraph}
               </p>
             </div>
-            <Placeholder label="About photo" ratio="4/3" tone="navy" />
+            {content.about_hero_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={content.about_hero_url}
+                alt=""
+                loading="lazy"
+                className="aspect-[4/3] w-full border border-navy/20 object-cover"
+              />
+            ) : (
+              <Placeholder label="About photo" ratio="4/3" tone="navy" />
+            )}
           </div>
         </div>
       </section>
 
-      {/* Process strip */}
+      {/* The Gallery */}
       <section className="bg-sage-wash">
         <Section as="div" className="!py-0">
           <div className="py-16 sm:py-24">
-            <Eyebrow>How it&apos;s made</Eyebrow>
+            <Eyebrow>Behind the scenes</Eyebrow>
             <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
-              Grind to pack
+              The Gallery
             </h2>
             <div className="mt-10">
-              <ProcessStrip />
+              <Gallery items={gallery} />
             </div>
           </div>
         </Section>

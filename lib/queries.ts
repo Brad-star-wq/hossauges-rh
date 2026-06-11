@@ -1,10 +1,13 @@
 import { supabase } from "@/lib/supabase/client";
-import type {
-  Drop,
-  DropFlavor,
-  MerchItem,
-  ArchiveFlavor,
-  MeatType,
+import {
+  type Drop,
+  type DropFlavor,
+  type MerchItem,
+  type ArchiveFlavor,
+  type MeatType,
+  type GalleryItem,
+  type SiteContent,
+  DEFAULT_SITE_CONTENT,
 } from "@/lib/types";
 
 // Typed read helpers for the public site (Session 6 swaps the mock imports for
@@ -93,6 +96,33 @@ export async function getArchiveFlavors(): Promise<ArchiveFlavor[]> {
   return [...byName.values()].sort(
     (a, b) => b.made_count - a.made_count || a.name.localeCompare(b.name),
   );
+}
+
+/**
+ * Editable single fields. Falls back to defaults if the table is missing
+ * (migration 003 not yet applied) or a key is unset, so pages always render.
+ */
+export async function getSiteContent(): Promise<SiteContent> {
+  const { data, error } = await supabase.from("site_content").select("key, value");
+  if (error || !data) return { ...DEFAULT_SITE_CONTENT };
+
+  const map = new Map(data.map((r) => [r.key as string, (r.value as string) ?? ""]));
+  return {
+    home_hero_url: map.get("home_hero_url") || DEFAULT_SITE_CONTENT.home_hero_url,
+    about_hero_url: map.get("about_hero_url") || DEFAULT_SITE_CONTENT.about_hero_url,
+    about_paragraph:
+      map.get("about_paragraph") || DEFAULT_SITE_CONTENT.about_paragraph,
+  };
+}
+
+/** Gallery media for the About page, ordered by sort. Empty if table missing. */
+export async function getGallery(): Promise<GalleryItem[]> {
+  const { data, error } = await supabase
+    .from("gallery_items")
+    .select("id, type, url, sort")
+    .order("sort", { ascending: true });
+  if (error || !data) return [];
+  return data as GalleryItem[];
 }
 
 /** Active merch, sorted. (RLS also restricts anon reads to active = true.) */

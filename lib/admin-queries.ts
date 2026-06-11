@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Drop, MerchItem, DropFlavor } from "@/lib/types";
+import type { Drop, MerchItem, DropFlavor, GalleryItem } from "@/lib/types";
 
 // Service-role reads for the dashboard (see all data, incl. inactive merch and
 // the no-public-read tables). Only ever called from authed admin pages.
@@ -96,6 +96,25 @@ export async function getDropsForFilter(): Promise<DropOption[]> {
     week_label: d.week_label,
     status: d.status,
   }));
+}
+
+/** Raw site_content values for the editor (no default substitution). */
+export async function getContentMap(): Promise<Record<string, string>> {
+  const { data, error } = await supabaseAdmin.from("site_content").select("key, value");
+  if (error || !data) return {};
+  const out: Record<string, string> = {};
+  for (const r of data) out[r.key as string] = (r.value as string) ?? "";
+  return out;
+}
+
+/** All gallery items, ordered by sort. */
+export async function getGalleryAll(): Promise<GalleryItem[]> {
+  const { data, error } = await supabaseAdmin
+    .from("gallery_items")
+    .select("id, type, url, sort")
+    .order("sort", { ascending: true });
+  if (error || !data) return [];
+  return data as GalleryItem[];
 }
 
 export async function getEmailList(): Promise<string[]> {

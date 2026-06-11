@@ -2,7 +2,7 @@ import Link from "next/link";
 import { NotifyForm } from "@/components/notify-form";
 
 const LINKS = [
-  { href: "/drop", label: "Drop" },
+  { href: "/drop", label: "Batch" },
   { href: "/flavors", label: "Flavors" },
   { href: "/merch", label: "Merch" },
   { href: "/about", label: "About" },

@@ -6,8 +6,9 @@ import { adminLogout } from "@/app/admin/auth-actions";
 import { cn } from "@/lib/cn";
 
 const TABS = [
-  { href: "/admin", label: "Drop" },
+  { href: "/admin", label: "Batch" },
   { href: "/admin/merch", label: "Merch" },
+  { href: "/admin/gallery", label: "Gallery" },
   { href: "/admin/submissions", label: "Submissions" },
 ];
 

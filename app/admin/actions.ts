@@ -215,6 +215,128 @@ export async function deleteMerch(id: string): Promise<ActionResult> {
   }
 }
 
+// ── Gallery & editable content ───────────────────────────────────────────────
+
+const CONTENT_KEYS = new Set(["home_hero_url", "about_hero_url", "about_paragraph"]);
+
+function revalidateContent() {
+  revalidatePath("/");
+  revalidatePath("/about");
+}
+
+export async function saveSiteContent(key: string, value: string): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  if (!CONTENT_KEYS.has(key)) return { ok: false, message: "Unknown field." };
+  try {
+    const { error } = await supabaseAdmin
+      .from("site_content")
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
+    if (error) throw error;
+    revalidateContent();
+    return { ok: true, message: "Saved." };
+  } catch (err) {
+    console.error("[saveSiteContent]", err);
+    return { ok: false, message: "Couldn't save. Try again." };
+  }
+}
+
+export async function addGalleryItem(formData: FormData): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const file = formData.get("file");
+    const type = String(formData.get("type") ?? "");
+    if (!(file instanceof File) || file.size === 0) {
+      return { ok: false, message: "No file selected." };
+    }
+    if (type !== "photo" && type !== "video") {
+      return { ok: false, message: "Unknown media type." };
+    }
+    const ext = (file.name.split(".").pop() || (type === "video" ? "mp4" : "jpg"))
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+    const path = `gallery/${crypto.randomUUID()}.${ext}`;
+
+    const { error: upErr } = await supabaseAdmin.storage
+      .from("photos")
+      .upload(path, file, { contentType: file.type || undefined, upsert: true });
+    if (upErr) throw upErr;
+    const { data: pub } = supabaseAdmin.storage.from("photos").getPublicUrl(path);
+
+    // Append to the end (max sort + 1).
+    const { data: last } = await supabaseAdmin
+      .from("gallery_items")
+      .select("sort")
+      .order("sort", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const nextSort = (last?.sort ?? -1) + 1;
+
+    const { error: insErr } = await supabaseAdmin
+      .from("gallery_items")
+      .insert({ type, url: pub.publicUrl, sort: nextSort });
+    if (insErr) throw insErr;
+
+    revalidateContent();
+    return { ok: true, message: "Added." };
+  } catch (err) {
+    console.error("[addGalleryItem]", err);
+    return { ok: false, message: "Upload failed. Try again." };
+  }
+}
+
+export async function deleteGalleryItem(id: string): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    // Best-effort remove the stored file too (path is after "/photos/").
+    const { data: row } = await supabaseAdmin
+      .from("gallery_items")
+      .select("url")
+      .eq("id", id)
+      .maybeSingle();
+    if (row?.url) {
+      const marker = "/photos/";
+      const idx = (row.url as string).indexOf(marker);
+      if (idx !== -1) {
+        const path = (row.url as string).slice(idx + marker.length);
+        await supabaseAdmin.storage.from("photos").remove([path]);
+      }
+    }
+
+    const { error } = await supabaseAdmin.from("gallery_items").delete().eq("id", id);
+    if (error) throw error;
+    revalidateContent();
+    return { ok: true, message: "Deleted." };
+  } catch (err) {
+    console.error("[deleteGalleryItem]", err);
+    return { ok: false, message: "Couldn't delete. Try again." };
+  }
+}
+
+export async function moveGalleryItem(id: string, dir: "up" | "down"): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: items } = await supabaseAdmin
+      .from("gallery_items")
+      .select("id, sort")
+      .order("sort", { ascending: true });
+    if (!items) return { ok: false, message: "Couldn't reorder." };
+
+    const i = items.findIndex((it) => it.id === id);
+    const j = dir === "up" ? i - 1 : i + 1;
+    if (i === -1 || j < 0 || j >= items.length) return { ok: true, message: "" };
+
+    // Swap sort values of the two neighbours.
+    await supabaseAdmin.from("gallery_items").update({ sort: items[j].sort }).eq("id", items[i].id);
+    await supabaseAdmin.from("gallery_items").update({ sort: items[i].sort }).eq("id", items[j].id);
+
+    revalidateContent();
+    return { ok: true, message: "Reordered." };
+  } catch (err) {
+    console.error("[moveGalleryItem]", err);
+    return { ok: false, message: "Couldn't reorder. Try again." };
+  }
+}
+
 // ── Submissions ───────────────────────────────────────────────────────────────
 
 export async function markContacted(id: string, contacted: boolean): Promise<ActionResult> {

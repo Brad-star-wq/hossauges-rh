@@ -6,18 +6,23 @@ import { Button } from "@/components/button";
 import { DropBoard } from "@/components/drop-board";
 import { Ticker } from "@/components/ticker";
 import { HowItWorks } from "@/components/how-it-works";
-import { NotifyStrip } from "@/components/notify-strip";
 import { Placeholder } from "@/components/placeholder";
-import { getActiveDrop, getArchiveFlavors, getMerch } from "@/lib/queries";
+import {
+  getActiveDrop,
+  getArchiveFlavors,
+  getMerch,
+  getSiteContent,
+} from "@/lib/queries";
 import { formatPrice } from "@/lib/types";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [drop, archive, merch] = await Promise.all([
+  const [drop, archive, merch, content] = await Promise.all([
     getActiveDrop(),
     getArchiveFlavors(),
     getMerch(),
+    getSiteContent(),
   ]);
 
   const tickerItems = archive.map((f) => f.name);
@@ -25,21 +30,16 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero />
+      <Hero photoUrl={content.home_hero_url || null} />
 
-      {/* Condensed Drop Board (only when a drop is live) */}
+      {/* Compact batch board */}
       {drop && (
         <Section className="paper-grain">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <Eyebrow>This week</Eyebrow>
-              <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
-                On the board
-              </h2>
+          <div className="mx-auto max-w-md">
+            <Eyebrow>This week</Eyebrow>
+            <div className="mt-4">
+              <DropBoard drop={drop} variant="condensed" />
             </div>
-          </div>
-          <div className="mt-8 max-w-3xl">
-            <DropBoard drop={drop} variant="condensed" />
           </div>
         </Section>
       )}
@@ -47,7 +47,7 @@ export default async function HomePage() {
       {/* Flavor ticker — every flavor ever made */}
       {tickerItems.length > 0 && <Ticker items={tickerItems} />}
 
-      {/* How it works */}
+      {/* How it works (slim) */}
       <HowItWorks />
 
       {/* Merch teaser */}
@@ -101,7 +101,7 @@ export default async function HomePage() {
               </h2>
               <p className="mt-4 max-w-prose text-char">
                 We started Hossauges in 2024 in Columbia, SC, grinding and
-                smoking about a hundred pounds a week. Every drop is small,
+                smoking about a hundred pounds a week. Every batch is small,
                 hands-on, and a little experimental.
               </p>
               <div className="mt-6">
@@ -113,9 +113,6 @@ export default async function HomePage() {
           </div>
         </Section>
       </section>
-
-      {/* Notify strip */}
-      <NotifyStrip />
     </>
   );
 }

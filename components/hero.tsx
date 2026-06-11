@@ -6,7 +6,7 @@ import { Button } from "@/components/button";
 
 const LINES = [["Small-batch", "sausage."], ["Columbia,", "SC."]];
 
-export function Hero() {
+export function Hero({ photoUrl }: { photoUrl?: string | null }) {
   const reduceMotion = useReducedMotion();
 
   const container: Variants = {
@@ -26,16 +26,22 @@ export function Hero() {
 
   return (
     <section className="relative flex min-h-[calc(100svh-4rem)] items-center overflow-hidden">
-      {/* Full-bleed photo placeholder (final aspect: fills viewport) */}
-      <div
-        role="img"
-        aria-label="Hero photo — dark grill"
-        className="absolute inset-0 bg-navy-deep"
-      >
-        <span className="font-mono absolute bottom-4 right-4 text-[0.6rem] uppercase tracking-[0.25em] text-cream/70">
-          Hero photo
-        </span>
-      </div>
+      {/* Full-bleed photo: DB image when set, else styled placeholder. */}
+      {photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photoUrl}
+          alt=""
+          fetchPriority="high"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div role="img" aria-label="Hero photo — dark grill" className="absolute inset-0 bg-navy-deep">
+          <span className="font-mono absolute bottom-4 right-4 text-[0.6rem] uppercase tracking-[0.25em] text-cream/70">
+            Hero photo
+          </span>
+        </div>
+      )}
       {/* Navy-deep overlay */}
       <div className="absolute inset-0 bg-navy-deep/70" />
 
@@ -75,7 +81,7 @@ export function Hero() {
           transition={{ delay: reduceMotion ? 0 : 0.85, duration: 0.6 }}
         >
           <Button href="/drop" variant="primary">
-            See this week&apos;s drop
+            See this week&apos;s batch
           </Button>
         </motion.div>
       </div>

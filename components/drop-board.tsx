@@ -13,22 +13,30 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
-/** Compact flavor tag for the condensed (home) board. */
-function CondensedTag({ flavor }: { flavor: DropFlavor }) {
+/** Compact menu row for the condensed (home) board — tight, no photo. */
+function CondensedRow({ flavor }: { flavor: DropFlavor }) {
   return (
-    <div className="relative border border-navy/20 bg-cream p-5">
-      {flavor.sold_out && <Stamp />}
-      <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-ember">
-        {meatTypeLabel(flavor.meat_type)}
-      </p>
-      <h3 className="font-display mt-2 text-2xl font-extrabold uppercase leading-[0.95] tracking-[0.01em] text-navy">
-        {flavor.name}
-      </h3>
-      <p className="font-mono mt-3 text-sm text-char">
-        {formatPrice(flavor.price_cents)}{" "}
-        <span className="text-smoke">/ 3-pack</span>
-      </p>
-    </div>
+    <li className="flex items-center justify-between gap-3 border-t border-navy/15 py-3 first:border-t-0">
+      <div className="min-w-0">
+        <p className="font-mono text-[0.6rem] uppercase tracking-[0.18em] text-ember">
+          {meatTypeLabel(flavor.meat_type)}
+        </p>
+        <p className="font-display truncate text-lg font-extrabold uppercase leading-tight tracking-[0.01em] text-navy">
+          {flavor.name}
+        </p>
+      </div>
+      <div className="shrink-0 text-right">
+        {flavor.sold_out ? (
+          <span className="font-mono inline-block border border-ember px-2 py-0.5 text-[0.6rem] uppercase tracking-[0.12em] text-ember">
+            Sold out
+          </span>
+        ) : (
+          <span className="font-mono text-sm text-char">
+            {formatPrice(flavor.price_cents)}
+          </span>
+        )}
+      </div>
+    </li>
   );
 }
 
@@ -67,11 +75,13 @@ export function DropBoard({
   className?: string;
 }) {
   const reduceMotion = useReducedMotion();
+  const condensed = variant === "condensed";
 
   return (
     <motion.div
       className={cn(
-        "paper-grain border-2 border-navy bg-paper p-6 shadow-[6px_6px_0_0_var(--color-navy)] sm:p-8",
+        "paper-grain border-2 border-navy bg-paper shadow-[6px_6px_0_0_var(--color-navy)]",
+        condensed ? "p-4 sm:p-5" : "p-6 sm:p-8",
         className,
       )}
       initial={{
@@ -81,42 +91,36 @@ export function DropBoard({
       }}
       whileInView={{ opacity: 1, rotate: 0, y: 0 }}
       viewport={{ once: true, amount: 0.3 }}
-      transition={{
-        duration: reduceMotion ? 0.3 : 0.7,
-        ease: EASE,
-      }}
+      transition={{ duration: reduceMotion ? 0.3 : 0.7, ease: EASE }}
     >
       {/* Date-stamp header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-navy/20 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-navy/20 pb-3">
         <span className="font-mono text-xs uppercase tracking-[0.22em] text-navy">
-          ★ The Drop Board
+          ★ This Week&apos;s Batch
         </span>
         <span className="font-mono text-xs uppercase tracking-[0.22em] text-ember">
           {drop.week_label}
         </span>
       </div>
 
-      {/* Flavor tags */}
-      <div
-        className={cn(
-          "mt-6 grid gap-5",
-          variant === "condensed" ? "sm:grid-cols-2" : "grid-cols-1",
-        )}
-      >
-        {drop.flavors.map((flavor) =>
-          variant === "condensed" ? (
-            <CondensedTag key={flavor.id} flavor={flavor} />
-          ) : (
+      {condensed ? (
+        <>
+          <ul className="mt-2">
+            {drop.flavors.map((flavor) => (
+              <CondensedRow key={flavor.id} flavor={flavor} />
+            ))}
+          </ul>
+          <div className="mt-4">
+            <Button href="/drop" variant="primary">
+              See the full batch
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="mt-6 grid grid-cols-1 gap-5">
+          {drop.flavors.map((flavor) => (
             <FullFlavor key={flavor.id} flavor={flavor} />
-          ),
-        )}
-      </div>
-
-      {variant === "condensed" && (
-        <div className="mt-6">
-          <Button href="/drop" variant="primary">
-            See the full drop
-          </Button>
+          ))}
         </div>
       )}
     </motion.div>
