@@ -1,20 +1,23 @@
 /**
  * RESET TO EMPTY (clean handoff). Wipes ALL content so the owners start fresh:
- * deletes every row from drops, drop_flavors, merch_items, interest_submissions,
- * email_list (and the transient submission_guard), and empties the photos bucket.
+ * deletes every row from drops, drop_flavors, flavor_photos, merch_items,
+ * interest_submissions, email_list, gallery_items, preorder_items/signups (and
+ * the transient submission_guard), resets the editable content + pre-order
+ * config to defaults, and empties the photos bucket.
  *
  *   npm run reset
  *
  * Guarded by a typed confirmation so it can't fire by accident. After it runs:
- *   /drop    → "Next drop is in the works."
+ *   /drop    → "Next batch is in the works."
  *   /merch   → "Merch restock coming soon."
- *   /flavors → empty
+ *   /flavors → empty; /about → default story + placeholders; no pre-order pop-up
  * Then the owners add real content through the dashboard.
  */
 import { config } from "dotenv";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_ABOUT_PARAGRAPH } from "../lib/types";
 
 config({ path: ".env.local" });
 
@@ -77,11 +80,34 @@ async function run() {
   console.log("\nWiping…");
   // FK-safe order: children referencing others first.
   await wipe("interest_submissions");
+  await wipe("preorder_signups");
   await wipe("submission_guard");
+  await wipe("flavor_photos");
+  await wipe("gallery_items");
+  await wipe("preorder_items");
   await wipe("drop_flavors");
   await wipe("drops");
   await wipe("merch_items");
   await wipe("email_list");
+
+  // Reset config singletons to their seeded defaults (don't delete the rows).
+  const { error: scErr } = await db.from("site_content").upsert(
+    [
+      { key: "home_hero_url", value: "" },
+      { key: "about_hero_url", value: "" },
+      { key: "about_paragraph", value: DEFAULT_ABOUT_PARAGRAPH },
+    ],
+    { onConflict: "key" },
+  );
+  if (scErr && scErr.code !== "42P01") throw scErr;
+  console.log("  reset site_content to defaults");
+
+  const { error: poErr } = await db
+    .from("preorder_popup")
+    .upsert({ id: 1, enabled: false, title: "" }, { onConflict: "id" });
+  if (poErr && poErr.code !== "42P01") throw poErr;
+  console.log("  reset preorder_popup (disabled)");
+
   await emptyPhotosBucket();
 
   console.log("\n✓ Reset complete. The site now shows clean empty states.");
