@@ -86,6 +86,59 @@ export async function sendReserveEmail(
   }
 }
 
+export type PreorderEmailInput = {
+  customerName: string;
+  contact: string;
+  items: string;
+};
+
+/**
+ * Email the owners about a new pre-order signup. Best-effort (never throws) —
+ * the signup row is already saved before this runs.
+ */
+export async function sendPreorderEmail(
+  input: PreorderEmailInput,
+): Promise<{ sent: boolean; error?: string }> {
+  const client = resend();
+  if (!client) return { sent: false, error: "RESEND_API_KEY not set" };
+
+  const contactIsEmail = EMAIL_RE.test(input.contact);
+  const html = `
+  <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;background:#F7F3EA;color:#20242B;padding:24px">
+    <div style="max-width:520px;margin:0 auto;border:2px solid #2C4A66;background:#FFFDF7">
+      <div style="background:#E2552C;color:#F7F3EA;padding:14px 20px;font-size:12px;letter-spacing:0.18em;text-transform:uppercase">
+        ★ Hossauges — New Pre-order
+      </div>
+      <div style="padding:20px">
+        <h1 style="margin:0 0 16px;font-size:22px;color:#2C4A66;text-transform:uppercase">
+          ${escapeHtml(input.customerName)}
+        </h1>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <tr><td style="padding:6px 0;color:#6B7280;width:90px">Contact</td><td style="padding:6px 0">${escapeHtml(input.contact)}</td></tr>
+          <tr><td style="padding:6px 0;color:#6B7280;vertical-align:top">Items</td><td style="padding:6px 0">${escapeHtml(input.items)}</td></tr>
+        </table>
+      </div>
+      <div style="border-top:1px solid #2C4A6633;padding:12px 20px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#6B7280">
+        Est. 2024 — Columbia, SC
+      </div>
+    </div>
+  </div>`;
+
+  try {
+    const { error } = await client.emails.send({
+      from: FROM,
+      to: OWNER_EMAIL,
+      subject: `New pre-order — ${input.customerName}`,
+      html,
+      ...(contactIsEmail ? { replyTo: input.contact } : {}),
+    });
+    if (error) return { sent: false, error: error.message };
+    return { sent: true };
+  } catch (err) {
+    return { sent: false, error: err instanceof Error ? err.message : "send failed" };
+  }
+}
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")

@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveDrop } from "@/lib/queries";
-import { sendReserveEmail } from "@/lib/email";
+import { sendReserveEmail, sendPreorderEmail } from "@/lib/email";
 import { checkReserveRateLimit } from "@/lib/rate-limit";
-import { reserveSchema, resolveReserveFlavor } from "@/lib/reserve-core";
+import { reserveSchema, resolveReserveFlavor, isEmailOrPhone } from "@/lib/reserve-core";
 import { meatTypeLabel, type ActionResult } from "@/lib/types";
 
 /** Map a ZodError to our flat fieldErrors shape. */
@@ -181,5 +181,52 @@ export async function voteFlavor(input: unknown): Promise<ActionResult> {
   } catch (err) {
     console.error("[voteFlavor] unexpected:", err);
     return { ok: false, message: "Couldn't record that vote." };
+  }
+}
+
+// ── Pre-order signup (public; separate from the weekly reserve flow) ──────────
+
+const preorderSchema = z.object({
+  name: z.string().trim().min(2, "Tell us your name."),
+  contact: z
+    .string()
+    .trim()
+    .min(1, "Enter an email or phone number.")
+    .refine(isEmailOrPhone, "Enter a valid email or 10-digit phone number."),
+  items: z.string().trim().min(1, "Pick at least one item."),
+});
+
+export async function preorderSubmit(input: unknown): Promise<ActionResult> {
+  try {
+    const parsed = preorderSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        message: "Please fix the highlighted fields.",
+        fieldErrors: fieldErrorsFrom(parsed.error),
+      };
+    }
+    const { name, contact, items } = parsed.data;
+
+    const { allowed } = await checkReserveRateLimit(await callerIp());
+    if (!allowed) {
+      return { ok: false, message: "Too many requests — please try again in a little while." };
+    }
+
+    const { error } = await supabaseAdmin
+      .from("preorder_signups")
+      .insert({ name, contact, items });
+    if (error) {
+      console.error("[preorderSubmit] insert failed:", error.message);
+      return { ok: false, message: "Something went wrong saving your pre-order. Try again." };
+    }
+
+    const email = await sendPreorderEmail({ customerName: name, contact, items });
+    if (!email.sent) console.warn("[preorderSubmit] owner email not sent:", email.error);
+
+    return { ok: true, message: "You're on the pre-order list — we'll be in touch." };
+  } catch (err) {
+    console.error("[preorderSubmit] unexpected:", err);
+    return { ok: false, message: "Something went wrong. Please try again." };
   }
 }

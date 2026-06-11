@@ -86,6 +86,21 @@ body {
   }
 }
 
+/* ── Pre-order pop-up: count-aware grid (mirrors preorder-popup-mockup) ──── */
+/* --cols is set per item-count; columns are up to 118px, centered. */
+.preorder-grid {
+  display: grid;
+  gap: 26px 22px;
+  justify-content: center;
+  grid-template-columns: repeat(var(--cols), minmax(0, 118px));
+}
+@media (max-width: 540px) {
+  /* Cap at 2 columns on mobile so thumbnails never get tiny; fill the width. */
+  .preorder-grid {
+    grid-template-columns: repeat(min(var(--cols), 2), minmax(0, 1fr));
+  }
+}
+
 /* Reduced motion: collapse animations to near-instant */
 @media (prefers-reduced-motion: reduce) {
   *,

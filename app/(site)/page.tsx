@@ -4,54 +4,52 @@ import { Section } from "@/components/section";
 import { Eyebrow } from "@/components/eyebrow";
 import { Button } from "@/components/button";
 import { DropBoard } from "@/components/drop-board";
-import { FlavorBox } from "@/components/flavor-box";
 import { HowItWorks } from "@/components/how-it-works";
 import { Placeholder } from "@/components/placeholder";
-import {
-  getActiveDrop,
-  getArchiveFlavors,
-  getMerch,
-  getSiteContent,
-} from "@/lib/queries";
+import { PreorderPopup } from "@/components/preorder-popup";
+import { getActiveDrop, getMerch, getSiteContent, getPreorder } from "@/lib/queries";
 import { formatPrice } from "@/lib/types";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [drop, archive, merch, content] = await Promise.all([
+  const [drop, merch, content, preorder] = await Promise.all([
     getActiveDrop(),
-    getArchiveFlavors(),
     getMerch(),
     getSiteContent(),
+    getPreorder(),
   ]);
 
   const teaserMerch = merch.slice(0, 3);
 
   return (
     <>
+      {/* Pre-order pop-up (shows on load only when enabled + has items) */}
+      <PreorderPopup popup={preorder} />
+
       <Hero photoUrl={content.home_hero_url || null} />
 
-      {/* Compact batch board */}
-      {drop && (
-        <Section className="paper-grain">
-          <div className="mx-auto max-w-md">
+      {/* This week's batch + how it works, side by side */}
+      <Section className="paper-grain">
+        <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+          <div>
             <Eyebrow>This week</Eyebrow>
             <div className="mt-4">
-              <DropBoard drop={drop} variant="condensed" />
+              {drop ? (
+                <DropBoard drop={drop} variant="condensed" />
+              ) : (
+                <div className="flex h-full flex-col justify-center border-2 border-navy bg-paper p-8 shadow-[6px_6px_0_0_var(--color-navy)]">
+                  <p className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
+                    Next batch is in the works.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
-        </Section>
-      )}
-
-      {/* Every flavor we've made — contained box (next after the batch menu) */}
-      {archive.length > 0 && (
-        <Section className="paper-grain">
-          <FlavorBox flavors={archive} />
-        </Section>
-      )}
-
-      {/* How it works (slim) */}
-      <HowItWorks />
+          {/* On desktop, align the box top with the batch card (below the eyebrow). */}
+          <HowItWorks className="lg:mt-[2.75rem]" />
+        </div>
+      </Section>
 
       {/* Merch teaser */}
       {teaserMerch.length > 0 && (
@@ -100,7 +98,7 @@ export default async function HomePage() {
             <div>
               <Eyebrow>Our story</Eyebrow>
               <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
-                Made by hand, by two friends.
+                Made by hand, by three friends.
               </h2>
               <p className="mt-4 max-w-prose text-char">
                 We started Hossauges in 2024 in Columbia, SC, grinding and

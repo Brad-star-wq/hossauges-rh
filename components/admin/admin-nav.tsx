@@ -9,6 +9,7 @@ const TABS = [
   { href: "/admin", label: "Batch" },
   { href: "/admin/merch", label: "Merch" },
   { href: "/admin/gallery", label: "Gallery" },
+  { href: "/admin/preorder", label: "Pre-order" },
   { href: "/admin/submissions", label: "Submissions" },
 ];
 
@@ -37,13 +38,13 @@ export function AdminNav() {
       </div>
 
       {/* Tab bar — big touch targets */}
-      <nav className="mx-auto flex max-w-3xl px-2">
+      <nav className="mx-auto flex max-w-3xl gap-1 overflow-x-auto px-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => (
           <Link
             key={tab.href}
             href={tab.href}
             className={cn(
-              "font-mono flex min-h-12 flex-1 items-center justify-center px-2 text-[0.7rem] uppercase tracking-[0.14em] transition-colors",
+              "font-mono flex min-h-12 shrink-0 items-center justify-center px-4 text-[0.7rem] uppercase tracking-[0.14em] transition-colors",
               isActive(tab.href)
                 ? "border-b-2 border-ember text-cream"
                 : "border-b-2 border-transparent text-cream/60 hover:text-cream",
