@@ -23,13 +23,12 @@ export default async function AdminDropPage() {
 
   const photosByFlavor = await getFlavorPhotos(drop.flavors.map((f) => f.id));
 
-  // Key by the flavor-id set so adding/removing flavors (then save → refresh)
-  // remounts the editor with canonical ids instead of stale local state.
+  // Key by the drop id (NOT the flavor-id set). Add/remove flavors are handled
+  // in local editor state, and photo uploads are server actions that refresh
+  // this route — keying on the flavor set would remount mid-edit and wipe
+  // unsaved field changes. We only want a fresh editor when the drop itself
+  // changes (e.g. "Publish new batch" creates a new active drop).
   return (
-    <DropEditor
-      key={drop.flavors.map((f) => f.id).join("-") || drop.id}
-      drop={drop}
-      photosByFlavor={photosByFlavor}
-    />
+    <DropEditor key={drop.id} drop={drop} photosByFlavor={photosByFlavor} />
   );
 }

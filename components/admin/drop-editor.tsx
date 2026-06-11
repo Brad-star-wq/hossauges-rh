@@ -2,7 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { saveDrop, publishNewDrop, type FlavorInput } from "@/app/admin/actions";
+import {
+  saveDrop,
+  publishNewDrop,
+  addFlavor as addFlavorAction,
+  type FlavorInput,
+} from "@/app/admin/actions";
 import { FlavorPhotos } from "@/components/admin/flavor-photos";
 import { type Drop, type MeatType } from "@/lib/types";
 import { cn } from "@/lib/cn";
@@ -27,18 +32,6 @@ function toCents(dollars: string): number | null {
   return Number.isFinite(n) ? Math.round(n * 100) : null;
 }
 
-function emptyFlavor(): EditFlavor {
-  return {
-    key: crypto.randomUUID(),
-    id: "",
-    name: "",
-    meat_type: "pork",
-    description: "",
-    priceDollars: "",
-    sold_out: false,
-  };
-}
-
 export function DropEditor({
   drop,
   photosByFlavor,
@@ -54,7 +47,7 @@ export function DropEditor({
       id: f.id,
       name: f.name,
       meat_type: f.meat_type,
-      description: f.description,
+      description: f.description ?? "", // never null — keeps the textarea controlled
       priceDollars: toDollars(f.price_cents),
       sold_out: f.sold_out,
     })),
@@ -62,13 +55,42 @@ export function DropEditor({
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [saving, startSave] = useTransition();
   const [publishing, startPublish] = useTransition();
+  const [adding, startAdd] = useTransition();
 
   function patch(i: number, p: Partial<EditFlavor>) {
     setFlavors((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...p } : f)));
   }
+  // Persist the new flavor immediately so it gets a real id — its photo uploader
+  // needs a flavor_id. We append it to local state (no refresh) so edits in
+  // progress on other flavors aren't lost. Name/fields save on "Save changes".
   function addFlavor() {
     setResult(null);
-    setFlavors((prev) => [...prev, emptyFlavor()]);
+    startAdd(async () => {
+      try {
+        const res = await addFlavorAction(drop.id);
+        if (res.ok && res.id) {
+          setFlavors((prev) => [
+            ...prev,
+            {
+              key: res.id!,
+              id: res.id!,
+              name: "",
+              meat_type: "pork",
+              description: "",
+              priceDollars: "",
+              sold_out: false,
+            },
+          ]);
+        } else {
+          setResult({ ok: false, message: res.message });
+        }
+      } catch (err) {
+        setResult({
+          ok: false,
+          message: err instanceof Error ? `Couldn't add flavor: ${err.message}` : "Couldn't add flavor.",
+        });
+      }
+    });
   }
   function removeFlavor(i: number) {
     const f = flavors[i];
@@ -267,9 +289,10 @@ export function DropEditor({
       <button
         type="button"
         onClick={addFlavor}
-        className="font-mono min-h-12 w-full border-2 border-dashed border-navy/40 px-6 py-4 text-xs uppercase tracking-[0.18em] text-navy transition-colors hover:border-ember hover:text-ember"
+        disabled={adding}
+        className="font-mono min-h-12 w-full border-2 border-dashed border-navy/40 px-6 py-4 text-xs uppercase tracking-[0.18em] text-navy transition-colors hover:border-ember hover:text-ember disabled:opacity-50"
       >
-        + Add flavor
+        {adding ? "Adding…" : "+ Add flavor"}
       </button>
 
       {result && (

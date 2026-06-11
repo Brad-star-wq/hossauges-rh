@@ -60,9 +60,9 @@ export async function saveDrop(input: {
 
     for (const f of input.flavors) {
       const row = {
-        name: f.name.trim() || "Untitled flavor",
+        name: (f.name ?? "").trim() || "Untitled flavor",
         meat_type: f.meat_type,
-        description: f.description.trim(),
+        description: (f.description ?? "").trim(),
         price_cents: f.price_cents,
         sold_out: f.sold_out,
       };
@@ -82,6 +82,30 @@ export async function saveDrop(input: {
   } catch (err) {
     console.error("[saveDrop]", err);
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't save changes. Try again." };
+  }
+}
+
+/**
+ * Insert one empty flavor into the active drop and return its id. The editor
+ * appends it locally with that real id so its photo uploader works immediately
+ * (photos require a flavor_id). Name/fields are filled in and persisted on Save.
+ */
+export async function addFlavor(
+  dropId: string,
+): Promise<ActionResult & { id?: string }> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: row, error } = await supabaseAdmin
+      .from("drop_flavors")
+      .insert({ drop_id: dropId, name: "", meat_type: "pork", description: "", sold_out: false })
+      .select("id")
+      .single();
+    if (error) throw error;
+    revalidatePublic();
+    return { ok: true, message: "Flavor added.", id: row.id };
+  } catch (err) {
+    console.error("[addFlavor]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't add flavor. Try again." };
   }
 }
 
@@ -127,7 +151,7 @@ export async function publishNewDrop(): Promise<ActionResult> {
 
     const { error: flavErr } = await supabaseAdmin
       .from("drop_flavors")
-      .insert({ drop_id: created.id, name: "New flavor", meat_type: "pork", sold_out: false });
+      .insert({ drop_id: created.id, name: "New flavor", meat_type: "pork", description: "", sold_out: false });
     if (flavErr) throw flavErr;
 
     revalidatePublic();

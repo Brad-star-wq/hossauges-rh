@@ -18,9 +18,10 @@ export async function getActiveDropAdmin(): Promise<Drop | null> {
   if (error) throw error;
   if (!data) return null;
 
-  type Row = Omit<DropFlavor, "photos">;
+  type Row = Omit<DropFlavor, "photos" | "description"> & { description: string | null };
   const flavors: DropFlavor[] = ((data.drop_flavors ?? []) as Row[]).map((f) => ({
     ...f,
+    description: f.description ?? "", // DB description is nullable; the editor + saveDrop expect a string
     photos: f.photo_url ? [f.photo_url] : [],
   }));
 
