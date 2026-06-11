@@ -13,6 +13,9 @@ import {
 } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
+// Home menu shows at most this many rows; the rest live on the full batch page.
+const CONDENSED_CAP = 6;
+
 /** Compact menu row for the condensed (home) board — tight, no photo. */
 function CondensedRow({ flavor }: { flavor: DropFlavor }) {
   return (
@@ -106,10 +109,15 @@ export function DropBoard({
       {condensed ? (
         <>
           <ul className="mt-2">
-            {drop.flavors.map((flavor) => (
+            {drop.flavors.slice(0, CONDENSED_CAP).map((flavor) => (
               <CondensedRow key={flavor.id} flavor={flavor} />
             ))}
           </ul>
+          {drop.flavors.length > CONDENSED_CAP && (
+            <p className="font-mono mt-3 border-t border-navy/15 pt-3 text-xs uppercase tracking-[0.16em] text-smoke">
+              + {drop.flavors.length - CONDENSED_CAP} more on the full batch
+            </p>
+          )}
           <div className="mt-4">
             <Button href="/drop" variant="primary">
               See the full batch

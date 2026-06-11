@@ -17,7 +17,7 @@ function revalidatePublic() {
 // ── Drop ─────────────────────────────────────────────────────────────────────
 
 export type FlavorInput = {
-  id: string;
+  id?: string; // absent / empty → a new flavor to insert
   name: string;
   meat_type: MeatType;
   description: string;
@@ -43,19 +43,38 @@ export async function saveDrop(input: {
       .eq("id", input.dropId);
     if (dropErr) throw dropErr;
 
-    for (const f of input.flavors) {
-      const { error } = await supabaseAdmin
-        .from("drop_flavors")
-        .update({
-          name: f.name.trim() || "Untitled flavor",
-          meat_type: f.meat_type,
-          description: f.description.trim(),
-          price_cents: f.price_cents,
-          sold_out: f.sold_out,
-          photo_url: f.photo_url,
-        })
-        .eq("id", f.id);
+    // Reconcile the flavor set: delete rows the editor removed, update the
+    // ones it kept, insert the new ones. Supports any flavor count.
+    const { data: existing } = await supabaseAdmin
+      .from("drop_flavors")
+      .select("id")
+      .eq("drop_id", input.dropId);
+    const existingIds = new Set((existing ?? []).map((r) => r.id as string));
+    const keptIds = new Set(input.flavors.map((f) => f.id).filter(Boolean) as string[]);
+    const toDelete = [...existingIds].filter((id) => !keptIds.has(id));
+    if (toDelete.length) {
+      const { error } = await supabaseAdmin.from("drop_flavors").delete().in("id", toDelete);
       if (error) throw error;
+    }
+
+    for (const f of input.flavors) {
+      const row = {
+        name: f.name.trim() || "Untitled flavor",
+        meat_type: f.meat_type,
+        description: f.description.trim(),
+        price_cents: f.price_cents,
+        sold_out: f.sold_out,
+        photo_url: f.photo_url,
+      };
+      if (f.id && existingIds.has(f.id)) {
+        const { error } = await supabaseAdmin.from("drop_flavors").update(row).eq("id", f.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseAdmin
+          .from("drop_flavors")
+          .insert({ drop_id: input.dropId, ...row });
+        if (error) throw error;
+      }
     }
 
     revalidatePublic();
@@ -106,14 +125,13 @@ export async function publishNewDrop(): Promise<ActionResult> {
       .single();
     if (dropErr) throw dropErr;
 
-    const { error: flavErr } = await supabaseAdmin.from("drop_flavors").insert([
-      { drop_id: created.id, name: "New flavor 1", meat_type: "pork", sold_out: false },
-      { drop_id: created.id, name: "New flavor 2", meat_type: "beef_pork", sold_out: false },
-    ]);
+    const { error: flavErr } = await supabaseAdmin
+      .from("drop_flavors")
+      .insert({ drop_id: created.id, name: "New flavor", meat_type: "pork", sold_out: false });
     if (flavErr) throw flavErr;
 
     revalidatePublic();
-    return { ok: true, message: "New drop published. Edit the two flavors." };
+    return { ok: true, message: "New batch published. Edit the flavor and add more." };
   } catch (err) {
     console.error("[publishNewDrop]", err);
     return { ok: false, message: "Couldn't publish a new drop. Try again." };

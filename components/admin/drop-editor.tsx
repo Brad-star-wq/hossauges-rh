@@ -8,7 +8,8 @@ import { type Drop, type MeatType } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 type EditFlavor = {
-  id: string;
+  key: string; // stable React key (db id, or a fresh id for unsaved flavors)
+  id: string; // db id, "" for a not-yet-saved flavor
   name: string;
   meat_type: MeatType;
   description: string;
@@ -27,11 +28,25 @@ function toCents(dollars: string): number | null {
   return Number.isFinite(n) ? Math.round(n * 100) : null;
 }
 
+function emptyFlavor(): EditFlavor {
+  return {
+    key: crypto.randomUUID(),
+    id: "",
+    name: "",
+    meat_type: "pork",
+    description: "",
+    priceDollars: "",
+    sold_out: false,
+    photo_url: null,
+  };
+}
+
 export function DropEditor({ drop }: { drop: Drop }) {
   const router = useRouter();
   const [weekLabel, setWeekLabel] = useState(drop.week_label);
   const [flavors, setFlavors] = useState<EditFlavor[]>(
     drop.flavors.map((f) => ({
+      key: f.id,
       id: f.id,
       name: f.name,
       meat_type: f.meat_type,
@@ -48,6 +63,16 @@ export function DropEditor({ drop }: { drop: Drop }) {
   function patch(i: number, p: Partial<EditFlavor>) {
     setFlavors((prev) => prev.map((f, idx) => (idx === i ? { ...f, ...p } : f)));
   }
+  function addFlavor() {
+    setResult(null);
+    setFlavors((prev) => [...prev, emptyFlavor()]);
+  }
+  function removeFlavor(i: number) {
+    const f = flavors[i];
+    const named = f.name.trim() || "this flavor";
+    if (!window.confirm(`Remove ${named} from the batch? Save to make it final.`)) return;
+    setFlavors((prev) => prev.filter((_, idx) => idx !== i));
+  }
 
   function onSave() {
     setResult(null);
@@ -55,7 +80,7 @@ export function DropEditor({ drop }: { drop: Drop }) {
       dropId: drop.id,
       weekLabel,
       flavors: flavors.map((f) => ({
-        id: f.id,
+        id: f.id || undefined,
         name: f.name,
         meat_type: f.meat_type,
         description: f.description,
@@ -67,13 +92,13 @@ export function DropEditor({ drop }: { drop: Drop }) {
     startSave(async () => {
       const res = await saveDrop(payload);
       setResult(res);
-      if (res.ok) router.refresh();
+      if (res.ok) router.refresh(); // reload canonical ids for newly-inserted flavors
     });
   }
 
   function onPublish() {
     const ok = window.confirm(
-      "This archives the current drop. The old flavors move to the Flavors page. Continue?",
+      "This archives the current batch. The old flavors move to the Flavors page. Continue?",
     );
     if (!ok) return;
     setResult(null);
@@ -92,9 +117,11 @@ export function DropEditor({ drop }: { drop: Drop }) {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
-          This week&apos;s drop
+          This week&apos;s batch
         </h1>
-        <p className="mt-1 text-sm text-smoke">Edit the board, then Save changes.</p>
+        <p className="mt-1 text-sm text-smoke">
+          {flavors.length} flavor{flavors.length === 1 ? "" : "s"}. Edit, add, or remove — then Save changes.
+        </p>
       </div>
 
       {/* Week label */}
@@ -113,18 +140,18 @@ export function DropEditor({ drop }: { drop: Drop }) {
 
       {/* Flavors */}
       {flavors.map((f, i) => (
-        <fieldset key={f.id} className="border border-navy/20 bg-paper p-4">
+        <fieldset key={f.key} className="border border-navy/20 bg-paper p-4">
           <legend className="font-mono px-2 text-[0.65rem] uppercase tracking-[0.18em] text-ember">
             Flavor {i + 1}
           </legend>
 
           <div className="flex flex-col gap-4">
             <div>
-              <label htmlFor={`name-${f.id}`} className={labelCls}>
+              <label htmlFor={`name-${f.key}`} className={labelCls}>
                 Name
               </label>
               <input
-                id={`name-${f.id}`}
+                id={`name-${f.key}`}
                 value={f.name}
                 onChange={(e) => patch(i, { name: e.target.value })}
                 className={fieldCls}
@@ -133,11 +160,11 @@ export function DropEditor({ drop }: { drop: Drop }) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor={`meat-${f.id}`} className={labelCls}>
+                <label htmlFor={`meat-${f.key}`} className={labelCls}>
                   Meat type
                 </label>
                 <select
-                  id={`meat-${f.id}`}
+                  id={`meat-${f.key}`}
                   value={f.meat_type}
                   onChange={(e) => patch(i, { meat_type: e.target.value as MeatType })}
                   className={cn(fieldCls, "appearance-none")}
@@ -147,11 +174,11 @@ export function DropEditor({ drop }: { drop: Drop }) {
                 </select>
               </div>
               <div>
-                <label htmlFor={`price-${f.id}`} className={labelCls}>
+                <label htmlFor={`price-${f.key}`} className={labelCls}>
                   Price / 3-pack ($)
                 </label>
                 <input
-                  id={`price-${f.id}`}
+                  id={`price-${f.key}`}
                   inputMode="decimal"
                   value={f.priceDollars}
                   onChange={(e) => patch(i, { priceDollars: e.target.value })}
@@ -162,11 +189,11 @@ export function DropEditor({ drop }: { drop: Drop }) {
             </div>
 
             <div>
-              <label htmlFor={`desc-${f.id}`} className={labelCls}>
+              <label htmlFor={`desc-${f.key}`} className={labelCls}>
                 Description
               </label>
               <textarea
-                id={`desc-${f.id}`}
+                id={`desc-${f.key}`}
                 value={f.description}
                 onChange={(e) => patch(i, { description: e.target.value })}
                 rows={2}
@@ -212,9 +239,28 @@ export function DropEditor({ drop }: { drop: Drop }) {
                 Sold out
               </span>
             </button>
+
+            {/* Remove flavor */}
+            <button
+              type="button"
+              onClick={() => removeFlavor(i)}
+              disabled={flavors.length <= 1}
+              className="font-mono self-start text-[0.6rem] uppercase tracking-[0.14em] text-ember disabled:opacity-30"
+            >
+              Remove flavor
+            </button>
           </div>
         </fieldset>
       ))}
+
+      {/* Add flavor */}
+      <button
+        type="button"
+        onClick={addFlavor}
+        className="font-mono min-h-12 w-full border-2 border-dashed border-navy/40 px-6 py-4 text-xs uppercase tracking-[0.18em] text-navy transition-colors hover:border-ember hover:text-ember"
+      >
+        + Add flavor
+      </button>
 
       {result && (
         <p
@@ -235,7 +281,7 @@ export function DropEditor({ drop }: { drop: Drop }) {
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="font-mono min-h-12 w-full bg-ember px-6 py-4 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy disabled:opacity-60"
+          className="font-mono min-h-12 w-full bg-ember-press px-6 py-4 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
@@ -245,7 +291,7 @@ export function DropEditor({ drop }: { drop: Drop }) {
           disabled={publishing}
           className="font-mono min-h-12 w-full border-2 border-navy px-6 py-4 text-xs uppercase tracking-[0.18em] text-navy transition-colors hover:bg-navy hover:text-cream disabled:opacity-60"
         >
-          {publishing ? "Publishing…" : "Publish new drop"}
+          {publishing ? "Publishing…" : "Publish new batch"}
         </button>
       </div>
     </div>

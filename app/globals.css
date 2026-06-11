@@ -70,22 +70,6 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* ── Marquee ticker (pure CSS, pauses on hover) ──────────────────────── */
-@keyframes ticker-scroll {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.ticker-track {
-  animation: ticker-scroll 40s linear infinite;
-}
-.ticker-track:hover {
-  animation-play-state: paused;
-}
-
 /* ── Sold-out stamp thump-in ─────────────────────────────────────────── */
 @keyframes stamp-in {
   0% {
@@ -111,8 +95,5 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  .ticker-track {
-    animation: none !important;
   }
 }

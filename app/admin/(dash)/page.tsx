@@ -21,5 +21,7 @@ export default async function AdminDropPage() {
     );
   }
 
-  return <DropEditor drop={drop} />;
+  // Key by the flavor-id set so adding/removing flavors (then save → refresh)
+  // remounts the editor with canonical ids instead of stale local state.
+  return <DropEditor key={drop.flavors.map((f) => f.id).join("-") || drop.id} drop={drop} />;
 }

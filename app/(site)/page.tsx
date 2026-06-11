@@ -4,7 +4,7 @@ import { Section } from "@/components/section";
 import { Eyebrow } from "@/components/eyebrow";
 import { Button } from "@/components/button";
 import { DropBoard } from "@/components/drop-board";
-import { Ticker } from "@/components/ticker";
+import { FlavorBox } from "@/components/flavor-box";
 import { HowItWorks } from "@/components/how-it-works";
 import { Placeholder } from "@/components/placeholder";
 import {
@@ -25,7 +25,6 @@ export default async function HomePage() {
     getSiteContent(),
   ]);
 
-  const tickerItems = archive.map((f) => f.name);
   const teaserMerch = merch.slice(0, 3);
 
   return (
@@ -44,8 +43,12 @@ export default async function HomePage() {
         </Section>
       )}
 
-      {/* Flavor ticker — every flavor ever made */}
-      {tickerItems.length > 0 && <Ticker items={tickerItems} />}
+      {/* Every flavor we've made — contained box (next after the batch menu) */}
+      {archive.length > 0 && (
+        <Section className="paper-grain">
+          <FlavorBox flavors={archive} />
+        </Section>
+      )}
 
       {/* How it works (slim) */}
       <HowItWorks />
