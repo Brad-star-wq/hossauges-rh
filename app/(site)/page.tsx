@@ -7,7 +7,8 @@ import { DropBoard } from "@/components/drop-board";
 import { HowItWorks } from "@/components/how-it-works";
 import { Placeholder } from "@/components/placeholder";
 import { PreorderPopup } from "@/components/preorder-popup";
-import { getActiveDrop, getMerch, getSiteContent, getPreorder } from "@/lib/queries";
+import { getActiveDrop, getSiteContent, getPreorder } from "@/lib/queries";
+import { getSquareMerch } from "@/lib/square";
 import { formatPrice } from "@/lib/types";
 
 export const revalidate = 60;
@@ -15,12 +16,12 @@ export const revalidate = 60;
 export default async function HomePage() {
   const [drop, merch, content, preorder] = await Promise.all([
     getActiveDrop(),
-    getMerch(),
+    getSquareMerch({ withCheckout: false }), // teaser links to /merch; no checkout links
     getSiteContent(),
     getPreorder(),
   ]);
 
-  const teaserMerch = merch.slice(0, 3);
+  const teaserMerch = merch.ok ? merch.items.slice(0, 3) : [];
 
   return (
     <>
@@ -70,18 +71,28 @@ export default async function HomePage() {
               <li key={item.id}>
                 <Link href="/merch" className="group block">
                   <div className="overflow-hidden border border-navy/15">
-                    <Placeholder
-                      label="Merch photo"
-                      ratio="4/5"
-                      tone="cream"
-                      className="transition-transform duration-300 group-hover:scale-[1.03]"
-                    />
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="aspect-[4/5] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <Placeholder
+                        label="Merch photo"
+                        ratio="4/5"
+                        tone="cream"
+                        className="transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    )}
                   </div>
                   <p className="font-display mt-3 text-lg font-bold uppercase leading-tight text-navy">
                     {item.name}
                   </p>
                   <p className="font-mono text-sm text-smoke">
-                    {formatPrice(item.price_cents)}
+                    {item.multiPrice ? "From " : ""}
+                    {formatPrice(item.priceCents)}
                   </p>
                 </Link>
               </li>

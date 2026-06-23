@@ -2,7 +2,7 @@
 // lib/queries.ts; types and helpers live in lib/types.ts. Prices are in cents;
 // a null price renders as "$—" (TBD), matching the brisket in CLAUDE.md.
 
-import type { Drop, MerchItem, ArchiveFlavor } from "@/lib/types";
+import type { Drop, ArchiveFlavor } from "@/lib/types";
 
 // ── Active drop — "WEEK OF JUNE 9" ──────────────────────────────────────
 export const activeDrop: Drop = {
@@ -67,46 +67,4 @@ export const archiveFlavors: ArchiveFlavor[] = [
   { name: "Korean Beef Bulgogi", meat_type: "beef_pork", made_count: 3, votes: 38 },
 ];
 
-// ── Merch (3 active + 1 inactive to verify the active filter, Session 4) ─
-export const merchItems: MerchItem[] = [
-  {
-    id: "merch-4th-tee",
-    name: "4th of July Tee",
-    price_cents: 3000,
-    sizes_note: "S–XXL",
-    photo_url: null,
-    square_link: "#",
-    active: true,
-    sort: 0,
-  },
-  {
-    id: "merch-dry-sage-hoodie",
-    name: "Dry Sage Hoodie",
-    price_cents: 4500,
-    sizes_note: "S–XXL",
-    photo_url: null,
-    square_link: "#",
-    active: true,
-    sort: 1,
-  },
-  {
-    id: "merch-black-camo-hoodie",
-    name: "Black Camo Hoodie",
-    price_cents: 5000,
-    sizes_note: "S–XXL",
-    photo_url: null,
-    square_link: "#",
-    active: true,
-    sort: 2,
-  },
-  {
-    id: "merch-retired-trucker-hat",
-    name: "Retired Trucker Hat",
-    price_cents: 2500,
-    sizes_note: "One size",
-    photo_url: null,
-    square_link: "#",
-    active: false, // hidden — verifies the active filter
-    sort: 3,
-  },
-];
+// Merch is no longer mocked or seeded — Square is the source of truth (Round 6).

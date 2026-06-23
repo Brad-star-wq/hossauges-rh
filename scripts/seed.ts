@@ -15,7 +15,7 @@
 import { config } from "dotenv";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@supabase/supabase-js";
-import { activeDrop, archiveFlavors, merchItems } from "../lib/mock";
+import { activeDrop, archiveFlavors } from "../lib/mock";
 
 config({ path: ".env.local" });
 
@@ -39,13 +39,6 @@ const ACTIVE_FLAVOR_IDS: Record<string, string> = {
   "Jalapeño Pimento Brisket": "11111111-1111-4111-8111-0000000000a1",
   "Blueberry Gouda": "11111111-1111-4111-8111-0000000000a2",
 };
-const MERCH_IDS = [
-  "33333333-3333-4333-8333-000000000001",
-  "33333333-3333-4333-8333-000000000002",
-  "33333333-3333-4333-8333-000000000003",
-  "33333333-3333-4333-8333-000000000004",
-];
-
 async function run() {
   const now = new Date().toISOString();
 
@@ -121,28 +114,13 @@ async function run() {
     .insert([...activeRows, ...archiveRows]);
   if (flavErr) throw flavErr;
 
-  // 3) Merch — upsert by fixed id (3 active + 1 hidden, mirroring the mock).
-  const merchRows = merchItems.map((m, i) => ({
-    id: MERCH_IDS[i] ?? randomUUID(),
-    name: m.name,
-    price_cents: m.price_cents,
-    sizes_note: m.sizes_note,
-    photo_url: m.photo_url,
-    square_link: m.square_link,
-    active: m.active,
-    sort: m.sort,
-  }));
-  const { error: merchErr } = await db
-    .from("merch_items")
-    .upsert(merchRows, { onConflict: "id" });
-  if (merchErr) throw merchErr;
+  // Merch is no longer seeded — it lives in Square (Round 6).
 
   console.log("✓ Seed complete");
   console.log(`  drops:        2 (1 active "${activeDrop.week_label}", 1 archive)`);
   console.log(
     `  drop_flavors: ${activeRows.length + archiveRows.length} (${activeRows.length} active + ${archiveRows.length} archive)`,
   );
-  console.log(`  merch_items:  ${merchRows.length} (${merchRows.filter((m) => m.active).length} active)`);
 }
 
 run().catch((err) => {

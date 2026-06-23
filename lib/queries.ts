@@ -2,7 +2,6 @@ import { supabase } from "@/lib/supabase/client";
 import {
   type Drop,
   type DropFlavor,
-  type MerchItem,
   type ArchiveFlavor,
   type MeatType,
   type GalleryItem,
@@ -200,18 +199,4 @@ export async function getGallery(): Promise<GalleryItem[]> {
     .order("sort", { ascending: true });
   if (error || !data) return [];
   return data as GalleryItem[];
-}
-
-/** Active merch, sorted. (RLS also restricts anon reads to active = true.) */
-export async function getMerch(): Promise<MerchItem[]> {
-  const { data, error } = await supabase
-    .from("merch_items")
-    .select(
-      "id, name, price_cents, sizes_note, photo_url, square_link, active, sort",
-    )
-    .eq("active", true)
-    .order("sort", { ascending: true });
-
-  if (error) throw error;
-  return (data ?? []) as MerchItem[];
 }

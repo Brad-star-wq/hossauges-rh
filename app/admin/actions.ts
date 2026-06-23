@@ -312,80 +312,8 @@ export async function uploadPhoto(
 }
 
 // ── Merch ─────────────────────────────────────────────────────────────────────
-
-export type MerchInput = {
-  id?: string;
-  name: string;
-  price_cents: number;
-  sizes_note: string;
-  photo_url: string | null;
-  square_link: string;
-  active: boolean;
-};
-
-export async function saveMerch(input: MerchInput): Promise<ActionResult> {
-  if (!(await isAdmin())) return DENIED;
-  try {
-    if (!input.name.trim()) return { ok: false, message: "Give the item a name." };
-
-    const row = {
-      name: input.name.trim(),
-      price_cents: input.price_cents,
-      sizes_note: input.sizes_note.trim(),
-      photo_url: input.photo_url,
-      square_link: input.square_link.trim(),
-      active: input.active,
-    };
-
-    if (input.id) {
-      const { error } = await supabaseAdmin.from("merch_items").update(row).eq("id", input.id);
-      if (error) throw error;
-    } else {
-      // Append new items at the end (sort = max + 1) instead of all sharing 0.
-      const { data: last } = await supabaseAdmin
-        .from("merch_items")
-        .select("sort")
-        .order("sort", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const { error } = await supabaseAdmin
-        .from("merch_items")
-        .insert({ ...row, sort: (last?.sort ?? -1) + 1 });
-      if (error) throw error;
-    }
-    revalidatePublic();
-    return { ok: true, message: "Saved." };
-  } catch (err) {
-    console.error("[saveMerch]", err);
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save the item. Try again." };
-  }
-}
-
-export async function setMerchActive(id: string, active: boolean): Promise<ActionResult> {
-  if (!(await isAdmin())) return DENIED;
-  try {
-    const { error } = await supabaseAdmin.from("merch_items").update({ active }).eq("id", id);
-    if (error) throw error;
-    revalidatePublic();
-    return { ok: true, message: active ? "Shown." : "Hidden." };
-  } catch (err) {
-    console.error("[setMerchActive]", err);
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
-  }
-}
-
-export async function deleteMerch(id: string): Promise<ActionResult> {
-  if (!(await isAdmin())) return DENIED;
-  try {
-    const { error } = await supabaseAdmin.from("merch_items").delete().eq("id", id);
-    if (error) throw error;
-    revalidatePublic();
-    return { ok: true, message: "Deleted." };
-  } catch (err) {
-    console.error("[deleteMerch]", err);
-    return { ok: false, message: err instanceof Error ? err.message : "Couldn't delete. Try again." };
-  }
-}
+// Merch is now managed entirely in Square (Round 6) — the public /merch page and
+// the read-only admin tab read it live via lib/square.ts. No write actions here.
 
 // ── Gallery & editable content ───────────────────────────────────────────────
 

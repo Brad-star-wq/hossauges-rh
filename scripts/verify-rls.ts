@@ -89,19 +89,12 @@ async function run() {
     await svc.from("email_list").delete().eq("email", email);
   }
 
-  // E) merch read is restricted to active items
-  {
-    const { data } = await anon.from("merch_items").select("name, active");
-    const allActive = (data ?? []).every((m) => m.active === true);
-    const hiddenLeaked = (data ?? []).some((m) => m.name === "Retired Trucker Hat");
-    check(
-      "anon merch read returns only active items",
-      allActive && !hiddenLeaked,
-      `${data?.length ?? 0} rows, hidden leaked: ${hiddenLeaked}`,
-    );
-  }
+  // E) merch is no longer in the DB — Square is the source of truth (Round 6),
+  // so there's no merch_items table or RLS policy to verify here.
 
-  // F) active-drop query (mirrors getActiveDrop) returns Week of June 9
+  // F) active-drop read path (mirrors getActiveDrop) works for anon. We don't
+  // assert specific content — the seed is long gone and real drops are live now,
+  // so this just confirms the anon SELECT + flavor join succeeds without error.
   {
     const { data, error } = await anon
       .from("drops")
@@ -109,14 +102,15 @@ async function run() {
       .eq("status", "active")
       .limit(1)
       .maybeSingle();
-    const ok =
-      !error &&
-      data?.week_label === "WEEK OF JUNE 9" &&
-      (data?.drop_flavors?.length ?? 0) === 2;
+    const ok = !error && (data === null || typeof data.week_label === "string");
     check(
-      "getActiveDrop returns the Week of June 9 drop (2 flavors)",
+      "anon getActiveDrop read path works",
       ok,
-      error ? error.message : `week_label="${data?.week_label}", flavors=${data?.drop_flavors?.length ?? 0}`,
+      error
+        ? error.message
+        : data
+          ? `active drop="${data.week_label}", flavors=${data.drop_flavors?.length ?? 0}`
+          : "no active drop published (read path OK)",
     );
   }
 

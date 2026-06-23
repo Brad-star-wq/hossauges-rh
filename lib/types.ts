@@ -1,7 +1,7 @@
 // Shared domain types + pure display helpers + site constants. The public app
 // imports from here (not lib/mock.ts, which now only feeds the seed script).
 
-/** Canonical site URL — override with NEXT_PUBLIC_SITE_URL in Vercel. */
+/** Canonical site URL — override with NEXT_PUBLIC_SITE_URL in Netlify env. */
 export const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://hossauges.com"
 ).replace(/\/$/, "");
@@ -33,16 +33,7 @@ export type Drop = {
   flavors: DropFlavor[];
 };
 
-export type MerchItem = {
-  id: string;
-  name: string;
-  price_cents: number;
-  sizes_note: string;
-  photo_url: string | null;
-  square_link: string;
-  active: boolean;
-  sort: number;
-};
+// Merch is sourced from Square now (Round 6) — see lib/square.ts for its types.
 
 /** A deduped archive entry: how a flavor appears on /flavors. */
 export type ArchiveFlavor = {

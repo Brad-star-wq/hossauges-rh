@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import type { Drop, MerchItem, DropFlavor, GalleryItem, PreorderItem } from "@/lib/types";
+import type { Drop, DropFlavor, GalleryItem, PreorderItem } from "@/lib/types";
 
 // Service-role reads for the dashboard (see all data, incl. inactive merch and
 // the no-public-read tables). Only ever called from authed admin pages.
@@ -73,15 +73,6 @@ export async function getFlavorPhotos(
     (out[r.flavor_id] ??= []).push({ id: r.id, url: r.url });
   }
   return out;
-}
-
-export async function getAllMerch(): Promise<MerchItem[]> {
-  const { data, error } = await supabaseAdmin
-    .from("merch_items")
-    .select("id, name, price_cents, sizes_note, photo_url, square_link, active, sort")
-    .order("sort", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as MerchItem[];
 }
 
 export type SubmissionRow = {

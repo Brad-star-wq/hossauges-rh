@@ -1,15 +1,17 @@
 /**
  * RESET TO EMPTY (clean handoff). Wipes ALL content so the owners start fresh:
- * deletes every row from drops, drop_flavors, flavor_photos, merch_items,
+ * deletes every row from drops, drop_flavors, flavor_photos,
  * interest_submissions, email_list, gallery_items, preorder_items/signups (and
  * the transient submission_guard), resets the editable content + pre-order
  * config to defaults, and empties the photos bucket.
+ *
+ * Merch is NOT touched — it lives in Square now (Round 6). /merch reflects
+ * whatever is in the Square catalog; clear it there for a clean handoff.
  *
  *   npm run reset
  *
  * Guarded by a typed confirmation so it can't fire by accident. After it runs:
  *   /drop    → "Next batch is in the works."
- *   /merch   → "Merch restock coming soon."
  *   /flavors → empty; /about → default story + placeholders; no pre-order pop-up
  * Then the owners add real content through the dashboard.
  */
@@ -65,8 +67,9 @@ async function emptyPhotosBucket() {
 }
 
 async function run() {
-  console.log("\n⚠️  This permanently deletes ALL drops, flavors, merch,");
-  console.log("    reservations, the email list, and every uploaded photo.\n");
+  console.log("\n⚠️  This permanently deletes ALL drops, flavors,");
+  console.log("    reservations, the email list, and every uploaded photo.");
+  console.log("    (Merch lives in Square — clear it there separately.)\n");
 
   const rl = createInterface({ input: stdin, output: stdout });
   const answer = await rl.question("Type RESET to wipe all data: ");
@@ -87,7 +90,6 @@ async function run() {
   await wipe("preorder_items");
   await wipe("drop_flavors");
   await wipe("drops");
-  await wipe("merch_items");
   await wipe("email_list");
 
   // Reset config singletons to their seeded defaults (don't delete the rows).

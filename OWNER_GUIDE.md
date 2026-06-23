@@ -36,13 +36,16 @@ password. The session lasts a week, then asks again.
 
 ---
 
-## Add or edit merch
-You first create the item in the **Square** app to get a checkout link — see
-**SQUARE_SETUP.md** for those one-time steps. Then:
-1. **Merch** tab → **+ Add item** (or **Edit** on an existing one).
-2. Fill in name, price, sizes, and **paste the Square checkout link**.
-3. Upload a photo → tap **Save item**. It's now live with a working **Buy** button.
-4. **Hide** takes an item off the site without deleting it; **Delete** removes it for good (asks first).
+## Add or edit merch (all in Square)
+Merch lives entirely in the **Square** app now — there's nothing to edit on the
+website. See **SQUARE_SETUP.md** for the steps.
+1. In the **Square** app: create or edit the item — name, price, sizes, photo,
+   and a **stock count** per size.
+2. **Save.** The website shows it (with working **Buy** buttons per size) within
+   about a minute. Sold-out sizes are disabled automatically.
+3. To take something down, delete it or set its stock to 0 in Square.
+4. On the website, the **Merch** tab is **read-only** — it just mirrors what's in
+   Square so you can double-check. Tap **Refresh** to re-pull.
 
 ---
 

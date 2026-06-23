@@ -1,6 +1,6 @@
 # SQUARE SETUP — Owner Guide (Merch)
 
-Written for the Hossauges guys. No coding involved. You'll do this once per merch item, all from your phone.
+Written for the Hossauges guys. No coding involved. **Square is now your whole merch system** — you manage everything in the Square app and the website shows it automatically. There's nothing to copy or paste into the website anymore.
 
 ## One-time setup (15 minutes)
 1. Download the **Square** app (free) and create a free account — choose "Sell online / retail" when asked. No monthly fee; Square takes a small cut per sale (about 2.9% + 30¢ online).
@@ -10,19 +10,31 @@ Written for the Hossauges guys. No coding involved. You'll do this once per merc
 ## Adding a merch item (5 minutes each)
 1. Items → **Create Item**.
 2. Name it (e.g., "Black Camo Hoodie"), set the price ($50), add a photo.
-3. Add **Options** → "Size" → S, M, L, XL, XXL. If you want Square to track how many you have, enter a stock count per size.
-4. Save the item.
-5. Open the item → **Create checkout link** (sometimes labeled "Pay online" or under Online Checkout). Square gives you a web link.
-6. **Copy that link.**
+3. Add **Options** → "Size" → S, M, L, XL, XXL. Enter a **stock count** per size so Square (and the website) know when something's sold out.
+4. **Save.** That's it — the item shows up on the website within about a minute.
 
-## Putting it on the website (2 minutes)
-1. Go to **yoursite.com/admin** and log in with the shared password.
-2. Open the **Merch** tab → **Add item** (or edit an existing one).
-3. Fill in the name, price, sizes note, upload the same photo, and **paste the Square link** into the Square link field.
-4. Save. The item is now live with a working Buy button.
+## What shows up on the website, automatically
+- The **photo, name, price, and sizes** you entered in Square.
+- A **Buy** button per size that opens Square's secure checkout.
+- A **Sold out** label on any size (or whole item) once its stock hits 0.
+
+You don't paste a link anywhere. The website builds the checkout for each size from your Square catalog.
 
 ## Good to know
-- When something sells out, Square stops sales automatically if you entered stock counts. You can also flip the item to **Hidden** in the website dashboard.
-- Money lands in your linked bank account on Square's normal schedule (1–2 business days).
-- Customers get receipts from Square automatically.
-- Changing a price: change it in Square (the checkout link updates itself), then update the displayed price in the website dashboard so they match.
+- **Change anything in Square** — price, photo, a new item, stock to 0 — and the website updates within about a minute. No second step.
+- When a size sells out (stock 0), the website disables its Buy button automatically. To hide a whole item, delete it or remove it from this location in Square.
+- Money lands in your linked bank account on Square's normal schedule (1–2 business days). Customers get receipts from Square automatically.
+- To **check what's live**, open the website dashboard → **Merch** tab. It's read-only — it just mirrors your Square catalog so you can sanity-check. Tap **Refresh** to re-pull.
+
+---
+
+### For the developer (one-time, technical)
+The site reads Square with a **personal access token** (not OAuth). Set these in the deploy's environment (and `.env.local` for dev) — never commit them:
+
+```
+SQUARE_ACCESS_TOKEN=   # Production access token, scopes: ITEMS_READ, INVENTORY_READ, ORDERS_WRITE, PAYMENTS_WRITE
+SQUARE_LOCATION_ID=    # The Hossauges production location id
+SQUARE_ENV=production  # or "sandbox"
+```
+
+Verify connectivity any time with `npx tsx scripts/square-probe.ts` — it prints the live items, prices, image URLs, and stock counts. If it returns nothing, check that items are **present at this location** and the token scopes are right.
