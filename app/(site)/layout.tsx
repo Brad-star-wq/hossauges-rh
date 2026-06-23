@@ -1,6 +1,9 @@
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
+import { AnnouncementBar } from "@/components/announcement-bar";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION } from "@/lib/types";
+import { getSiteText } from "@/lib/queries";
+import { announcementEnabled } from "@/lib/site-text";
 
 const jsonLd = {
   "@context": "https://schema.org",
@@ -21,13 +24,20 @@ const jsonLd = {
   sameAs: ["https://instagram.com/hossaugessc"],
 };
 
-// Public site shell: sticky nav + footer + LocalBusiness structured data. The
-// /admin tree has its own shell and deliberately does not render these.
-export default function SiteLayout({
+// Keep the shared shell on ISR so the editable footer/announcement refresh
+// within the normal revalidate window instead of being fully dynamic.
+export const revalidate = 60;
+
+// Public site shell: optional announcement bar + sticky nav + footer +
+// LocalBusiness structured data. The /admin tree has its own shell and
+// deliberately does not render these.
+export default async function SiteLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const text = await getSiteText();
+
   return (
     <div className="flex min-h-svh flex-col">
       <script
@@ -35,9 +45,10 @@ export default function SiteLayout({
         // Static, trusted JSON — safe to inline.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
+      {announcementEnabled(text) && <AnnouncementBar text={text.announcement_text} />}
       <Nav />
       <main className="flex-1">{children}</main>
-      <Footer />
+      <Footer tagline={text.footer_tagline} notifyBlurb={text.notify_blurb} />
     </div>
   );
 }

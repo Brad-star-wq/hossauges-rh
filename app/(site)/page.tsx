@@ -7,17 +7,18 @@ import { DropBoard } from "@/components/drop-board";
 import { HowItWorks } from "@/components/how-it-works";
 import { Placeholder } from "@/components/placeholder";
 import { PreorderPopup } from "@/components/preorder-popup";
-import { getActiveDrop, getSiteContent, getPreorder } from "@/lib/queries";
+import { getActiveDrop, getSiteContent, getSiteText, getPreorder } from "@/lib/queries";
 import { getSquareMerch } from "@/lib/square";
 import { formatPrice } from "@/lib/types";
 
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const [drop, merch, content, preorder] = await Promise.all([
+  const [drop, merch, content, text, preorder] = await Promise.all([
     getActiveDrop(),
     getSquareMerch({ withCheckout: false }), // teaser links to /merch; no checkout links
     getSiteContent(),
+    getSiteText(),
     getPreorder(),
   ]);
 
@@ -28,7 +29,12 @@ export default async function HomePage() {
       {/* Pre-order pop-up (shows on load only when enabled + has items) */}
       <PreorderPopup popup={preorder} />
 
-      <Hero photoUrl={content.home_hero_url || null} />
+      <Hero
+        photoUrl={content.home_hero_url || null}
+        headline={text.home_hero_headline}
+        subhead={text.home_hero_subhead}
+        cta={text.home_hero_cta}
+      />
 
       {/* This week's batch + how it works, side by side */}
       <Section className="paper-grain">
@@ -48,7 +54,14 @@ export default async function HomePage() {
             </div>
           </div>
           {/* On desktop, align the box top with the batch card (below the eyebrow). */}
-          <HowItWorks className="lg:mt-[2.75rem]" />
+          <HowItWorks
+            className="lg:mt-[2.75rem]"
+            details={[
+              text.home_howitworks_1,
+              text.home_howitworks_2,
+              text.home_howitworks_3,
+            ]}
+          />
         </div>
       </Section>
 

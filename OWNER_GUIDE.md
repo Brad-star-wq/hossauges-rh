@@ -39,13 +39,20 @@ password. The session lasts a week, then asks again.
 ## Add or edit merch (all in Square)
 Merch lives entirely in the **Square** app now — there's nothing to edit on the
 website. See **SQUARE_SETUP.md** for the steps.
-1. In the **Square** app: create or edit the item — name, price, sizes, photo,
-   and a **stock count** per size.
-2. **Save.** The website shows it (with working **Buy** buttons per size) within
-   about a minute. Sold-out sizes are disabled automatically.
-3. To take something down, delete it or set its stock to 0 in Square.
+1. In the **Square** app: create or edit the item — name, price, **colors and
+   sizes** (as Options), a photo, and a **stock count** per variation.
+2. **Save.** Each item gets its own page on the website with **color and size
+   buttons**; picking a color + size shows a **Buy** button. Sold-out colors/sizes
+   are disabled automatically, and the photos can change with the color.
+3. To take something down, delete it or set its stock to 0 in Square. A variation
+   with **no price** can't be bought online until you add a price.
 4. On the website, the **Merch** tab is **read-only** — it just mirrors what's in
    Square so you can double-check. Tap **Refresh** to re-pull.
+
+> **Per-color photos:** to show a different photo when a shopper picks a color,
+> add a photo to each **color variation** from the **Square web dashboard**
+> (squareup.com on a computer → the item → a variation → add image). A photo on
+> the item alone shows for every color. Details in **SQUARE_SETUP.md**.
 
 ---
 

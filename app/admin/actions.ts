@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { isAdmin } from "@/lib/admin-session";
 import { type ActionResult, type MeatType, PREORDER_MAX_ITEMS } from "@/lib/types";
+import { SITE_TEXT_KEYS } from "@/lib/site-text";
 
 const DENIED: ActionResult = { ok: false, message: "Not authorized." };
 
@@ -336,6 +337,39 @@ export async function saveSiteContent(key: string, value: string): Promise<Actio
     return { ok: true, message: "Saved." };
   } catch (err) {
     console.error("[saveSiteContent]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't save. Try again." };
+  }
+}
+
+// ── Site Text (Round 8) — the scoped editable strings ────────────────────────
+// Stored in the same site_content table. Empty values are kept as "" so the
+// public resolver (getSiteText) falls back to the hardcoded default.
+
+const ALLOWED_SITE_TEXT = new Set<string>(SITE_TEXT_KEYS);
+
+export async function saveSiteText(
+  values: Record<string, string>,
+): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const now = new Date().toISOString();
+    const rows = Object.entries(values)
+      .filter(([key]) => ALLOWED_SITE_TEXT.has(key))
+      .map(([key, value]) => ({ key, value: (value ?? "").trim(), updated_at: now }));
+
+    if (rows.length === 0) return { ok: false, message: "Nothing to save." };
+
+    const { error } = await supabaseAdmin
+      .from("site_content")
+      .upsert(rows, { onConflict: "key" });
+    if (error) throw error;
+
+    // Footer + announcement bar live in the shared site layout, so revalidate
+    // the whole tree to refresh every page at once.
+    revalidatePath("/", "layout");
+    return { ok: true, message: "Saved." };
+  } catch (err) {
+    console.error("[saveSiteText]", err);
     return { ok: false, message: err instanceof Error ? err.message : "Couldn't save. Try again." };
   }
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { NotifyForm } from "@/components/notify-form";
+import { SITE_TEXT_DEFAULTS } from "@/lib/site-text";
 
 const LINKS = [
   { href: "/drop", label: "Batch" },
@@ -8,7 +9,13 @@ const LINKS = [
   { href: "/about", label: "About" },
 ];
 
-export function Footer() {
+export function Footer({
+  tagline = SITE_TEXT_DEFAULTS.footer_tagline,
+  notifyBlurb = SITE_TEXT_DEFAULTS.notify_blurb,
+}: {
+  tagline?: string;
+  notifyBlurb?: string;
+}) {
   return (
     <footer className="mt-auto bg-navy-deep text-cream">
       <div className="container grid gap-12 py-16 md:grid-cols-2">
@@ -26,10 +33,7 @@ export function Footer() {
               Hoss<span className="text-ember">auges</span>
             </span>
           </div>
-          <p className="max-w-sm text-sm text-cream/70">
-            Small-batch sausage, made by hand in Columbia, SC. New flavors drop
-            weekly.
-          </p>
+          <p className="max-w-sm text-sm text-cream/70">{tagline}</p>
         </div>
 
         {/* Notify-me (visual only this session) + nav */}
@@ -38,6 +42,9 @@ export function Footer() {
             <p className="font-mono text-xs uppercase tracking-[0.18em] text-cream/80">
               Get drop alerts
             </p>
+            {notifyBlurb && (
+              <p className="-mt-1 text-sm text-cream/70">{notifyBlurb}</p>
+            )}
             <NotifyForm />
           </div>
 

@@ -3,7 +3,7 @@ import { Eyebrow } from "@/components/eyebrow";
 import { Button } from "@/components/button";
 import { DropBoard } from "@/components/drop-board";
 import { ReserveForm } from "@/components/reserve-form";
-import { getActiveDrop } from "@/lib/queries";
+import { getActiveDrop, getSiteText } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "This Week's Batch",
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function DropPage() {
-  const drop = await getActiveDrop();
+  const [drop, text] = await Promise.all([getActiveDrop(), getSiteText()]);
 
   // Empty state — no active batch.
   if (!drop) {
@@ -45,9 +45,7 @@ export default async function DropPage() {
         <h1 className="font-display mt-4 text-5xl font-extrabold uppercase leading-[0.95] text-navy sm:text-7xl">
           This Week&apos;s Batch
         </h1>
-        <p className="mt-4 max-w-md text-lg text-char">
-          Two flavors, packs of three. Reserve below — pickup in Columbia.
-        </p>
+        <p className="mt-4 max-w-md text-lg text-char">{text.batch_intro}</p>
 
         <div className="mt-10 grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:items-start">
           <DropBoard drop={drop} variant="full" />

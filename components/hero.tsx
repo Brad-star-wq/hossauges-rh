@@ -3,11 +3,23 @@
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { EASE } from "@/lib/motion";
 import { Button } from "@/components/button";
+import { SITE_TEXT_DEFAULTS } from "@/lib/site-text";
 
-const LINES = [["Small-batch", "sausage."], ["Columbia,", "SC."]];
-
-export function Hero({ photoUrl }: { photoUrl?: string | null }) {
+export function Hero({
+  photoUrl,
+  headline = SITE_TEXT_DEFAULTS.home_hero_headline,
+  subhead = SITE_TEXT_DEFAULTS.home_hero_subhead,
+  cta = SITE_TEXT_DEFAULTS.home_hero_cta,
+}: {
+  photoUrl?: string | null;
+  headline?: string;
+  subhead?: string;
+  cta?: string;
+}) {
   const reduceMotion = useReducedMotion();
+
+  // The headline + subhead animate per word; split each editable line on spaces.
+  const LINES = [headline, subhead].map((line) => line.split(/\s+/).filter(Boolean));
 
   const container: Variants = {
     hidden: {},
@@ -81,7 +93,7 @@ export function Hero({ photoUrl }: { photoUrl?: string | null }) {
           transition={{ delay: reduceMotion ? 0 : 0.85, duration: 0.6 }}
         >
           <Button href="/drop" variant="primary">
-            See this week&apos;s batch
+            {cta}
           </Button>
         </motion.div>
       </div>

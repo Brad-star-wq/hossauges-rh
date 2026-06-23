@@ -10,15 +10,21 @@ Written for the Hossauges guys. No coding involved. **Square is now your whole m
 ## Adding a merch item (5 minutes each)
 1. Items → **Create Item**.
 2. Name it (e.g., "Black Camo Hoodie"), set the price ($50), add a photo.
-3. Add **Options** → "Size" → S, M, L, XL, XXL. Enter a **stock count** per size so Square (and the website) know when something's sold out.
+3. Add **Options** → "Size" → S, M, L, XL, XXL (and a "Color" option if it comes in colors). Set the **price** and a **stock count** for each variation so the website knows the price and when something's sold out.
 4. **Save.** That's it — the item shows up on the website within about a minute.
 
 ## What shows up on the website, automatically
-- The **photo, name, price, and sizes** you entered in Square.
-- A **Buy** button per size that opens Square's secure checkout.
-- A **Sold out** label on any size (or whole item) once its stock hits 0.
+- The **photo, name, price, colors, and sizes** you entered in Square.
+- On the website each item has its own page with **color buttons and size buttons**; picking a color + size reveals a **Buy** button that opens Square's secure checkout for that exact one.
+- A **Sold out** look on any color/size (or whole item) once its stock hits 0. A variation with **no price set** can't be bought online (its Buy button stays off) — set a price in Square to enable it.
 
-You don't paste a link anywhere. The website builds the checkout for each size from your Square catalog.
+You don't paste a link anywhere. The website builds the checkout for each color+size from your Square catalog.
+
+## Per-color photos (optional, nice to have)
+By default the item's photo shows for **every** color. To show a **different photo when a shopper picks a color**, attach a photo to each **color variation** — this only works from the **Square web dashboard**, not the phone app:
+1. On a computer, go to **squareup.com/dashboard** → **Items & orders → Items** → open the item.
+2. Click an individual **variation** (e.g. the "Navy" ones) → **add an image** to it.
+3. Save. Within about a minute the website shows that photo when "Navy" is selected. Colors without their own photo just keep showing the item's general photo.
 
 ## Good to know
 - **Change anything in Square** — price, photo, a new item, stock to 0 — and the website updates within about a minute. No second step.

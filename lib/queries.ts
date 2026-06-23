@@ -10,6 +10,7 @@ import {
   type PreorderItem,
   DEFAULT_SITE_CONTENT,
 } from "@/lib/types";
+import { SITE_TEXT_DEFAULTS, SITE_TEXT_KEYS, type SiteText } from "@/lib/site-text";
 
 // Typed read helpers for the public site (Session 6 swaps the mock imports for
 // these). All run through the anon client and rely on the RLS read policies.
@@ -170,6 +171,26 @@ export async function getSiteContent(): Promise<SiteContent> {
     about_paragraph:
       map.get("about_paragraph") || DEFAULT_SITE_CONTENT.about_paragraph,
   };
+}
+
+/**
+ * Editable site strings (Round 8). Reads the same site_content key/value table
+ * and resolves each scoped key to its stored value, or its hardcoded default
+ * when empty/missing — so the public site is never blank. One DB read; consumers
+ * pick the keys they need.
+ */
+export async function getSiteText(): Promise<SiteText> {
+  const { data, error } = await supabase.from("site_content").select("key, value");
+  const map = new Map<string, string>();
+  if (!error && data) {
+    for (const r of data) map.set(r.key as string, (r.value as string) ?? "");
+  }
+  const out = {} as SiteText;
+  for (const key of SITE_TEXT_KEYS) {
+    const stored = (map.get(key) ?? "").trim();
+    out[key] = stored || SITE_TEXT_DEFAULTS[key];
+  }
+  return out;
 }
 
 /**

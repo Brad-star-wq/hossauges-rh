@@ -1,13 +1,25 @@
 import { cn } from "@/lib/cn";
+import { SITE_TEXT_DEFAULTS } from "@/lib/site-text";
 
-const STEPS = [
-  { label: "We post", detail: "Two new flavors drop every week." },
-  { label: "You reserve", detail: "Claim your packs — no payment up front." },
-  { label: "You pick up", detail: "We confirm a pickup time in Columbia." },
-];
+// Step labels are structural (not editable); only the detail lines are.
+const LABELS = ["We post", "You reserve", "You pick up"] as const;
 
 /** Bordered "How it works" box with numbered steps (homepage right column). */
-export function HowItWorks({ className }: { className?: string }) {
+export function HowItWorks({
+  className,
+  details,
+}: {
+  className?: string;
+  /** The three editable detail lines, in order. Falls back to the defaults. */
+  details?: [string, string, string];
+}) {
+  const detailLines = details ?? [
+    SITE_TEXT_DEFAULTS.home_howitworks_1,
+    SITE_TEXT_DEFAULTS.home_howitworks_2,
+    SITE_TEXT_DEFAULTS.home_howitworks_3,
+  ];
+  const STEPS = LABELS.map((label, i) => ({ label, detail: detailLines[i] }));
+
   return (
     <div className={cn("flex h-full flex-col border-2 border-navy bg-cream p-6 sm:p-8", className)}>
       <h2 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy sm:text-4xl">

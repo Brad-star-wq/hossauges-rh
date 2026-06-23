@@ -10,13 +10,24 @@ import { cn } from "@/lib/cn";
  * swiping on mobile for free; arrows + dots drive it on desktop. One photo shows
  * cleanly with no controls. Fixed aspect ratio → no layout shift. Lazy after #1.
  */
-export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string }) {
+export function PhotoGallery({
+  photos,
+  alt,
+  ratio = "4/3",
+  placeholderLabel = "Flavor photo",
+}: {
+  photos: string[];
+  alt: string;
+  /** CSS aspect-ratio for each slide + the empty placeholder. */
+  ratio?: string;
+  placeholderLabel?: string;
+}) {
   const reduceMotion = useReducedMotion();
   const trackRef = useRef<HTMLUListElement>(null);
   const [index, setIndex] = useState(0);
 
   if (photos.length === 0) {
-    return <Placeholder label="Flavor photo" ratio="4/3" tone="navy" />;
+    return <Placeholder label={placeholderLabel} ratio={ratio} tone="navy" />;
   }
 
   const single = photos.length === 1;
@@ -56,7 +67,8 @@ export function PhotoGallery({ photos, alt }: { photos: string[]; alt: string })
               src={src}
               alt={i === 0 ? alt : `${alt} — photo ${i + 1}`}
               loading={i === 0 ? "eager" : "lazy"}
-              className="aspect-[4/3] w-full border border-navy/20 object-cover"
+              style={{ aspectRatio: ratio }}
+              className="w-full border border-navy/20 object-cover"
             />
           </li>
         ))}

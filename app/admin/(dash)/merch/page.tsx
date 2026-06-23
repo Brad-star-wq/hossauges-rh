@@ -25,11 +25,18 @@ export default async function AdminMerchPage() {
           Merch is managed in Square
         </p>
         <p className="mt-2 text-sm leading-relaxed text-char">
-          Add items, set prices and sizes, upload photos, and track stock in the{" "}
+          Add items, set prices, colors, sizes, photos, and stock in the{" "}
           <strong>Square app</strong>. The website pulls it in automatically and
           updates within about a minute — there’s nothing to edit here. See{" "}
           <span className="font-mono text-xs">SQUARE_SETUP.md</span> for the
           step-by-step.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-char">
+          <strong>Per-color photos:</strong> to make the site show a different
+          photo when a shopper picks a color, attach a photo to each{" "}
+          <em>color variation</em> from the Square <strong>web dashboard</strong>{" "}
+          (squareup.com → the item → a variation → add image). A photo added only
+          to the item shows for every color.
         </p>
         <p className="font-mono mt-3 text-[0.6rem] uppercase tracking-[0.14em] text-smoke">
           Live now from Square. Tap Refresh to re-check.
