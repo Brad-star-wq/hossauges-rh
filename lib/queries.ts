@@ -170,6 +170,8 @@ export async function getSiteContent(): Promise<SiteContent> {
     about_hero_url: map.get("about_hero_url") || DEFAULT_SITE_CONTENT.about_hero_url,
     about_paragraph:
       map.get("about_paragraph") || DEFAULT_SITE_CONTENT.about_paragraph,
+    home_story_image:
+      map.get("home_story_image") || DEFAULT_SITE_CONTENT.home_story_image,
   };
 }
 

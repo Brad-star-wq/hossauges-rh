@@ -118,16 +118,24 @@ export default async function HomePage() {
       <section className="bg-sage-wash">
         <Section as="div" className="!py-0">
           <div className="grid items-center gap-10 py-16 sm:py-24 md:grid-cols-2">
-            <Placeholder label="Story photo" ratio="4/3" tone="navy" />
+            {content.home_story_image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={content.home_story_image}
+                alt=""
+                loading="lazy"
+                className="aspect-[4/3] w-full border border-navy/20 object-cover"
+              />
+            ) : (
+              <Placeholder label="Story photo" ratio="4/3" tone="navy" />
+            )}
             <div>
               <Eyebrow>Our story</Eyebrow>
               <h2 className="font-display mt-3 text-4xl font-extrabold uppercase leading-[0.95] text-navy sm:text-5xl">
-                Made by hand, by three friends.
+                {text.home_story_heading}
               </h2>
-              <p className="mt-4 max-w-prose text-char">
-                We started Hossauges in 2024 in Columbia, SC, grinding and
-                smoking about a hundred pounds a week. Every batch is small,
-                hands-on, and a little experimental.
+              <p className="mt-4 max-w-prose whitespace-pre-line text-char">
+                {text.home_story_text}
               </p>
               <div className="mt-6">
                 <Button href="/about" variant="secondary">

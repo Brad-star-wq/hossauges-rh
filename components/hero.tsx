@@ -18,8 +18,13 @@ export function Hero({
 }) {
   const reduceMotion = useReducedMotion();
 
-  // The headline + subhead animate per word; split each editable line on spaces.
-  const LINES = [headline, subhead].map((line) => line.split(/\s+/).filter(Boolean));
+  // The big headline can be multiple lines (one phrase per line). Each line
+  // animates per word. The subhead is the sentence below it (its own paragraph).
+  const LINES = headline
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(/\s+/).filter(Boolean));
 
   const container: Variants = {
     hidden: {},
@@ -83,7 +88,7 @@ export function Hero({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: reduceMotion ? 0 : 0.7, duration: 0.6 }}
         >
-          Three friends, a smoker, and a new pair of flavors every week.
+          {subhead}
         </motion.p>
 
         <motion.div

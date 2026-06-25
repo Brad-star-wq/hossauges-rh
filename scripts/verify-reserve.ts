@@ -1,15 +1,15 @@
 /**
- * Reserve-flow verification (Session 6). Run after migration + seed:
+ * Reserve-flow verification (Round 9: multi-flavor). Run after migration + seed:
  *   npx tsx scripts/verify-reserve.ts
  *
- * Proves: (1) a valid reserve INSERTS a row into Supabase, and (2) the
- * authoritative core rejects a sold-out / unknown flavor and bad input — the
- * exact reserveSchema + resolveReserveFlavor the server action runs. Does NOT
- * send email (that's the live test you trigger).
+ * Proves: (1) a valid multi-flavor reserve INSERTS a parent + per-flavor line
+ * items into Supabase, and (2) the authoritative core rejects a sold-out /
+ * unknown flavor and bad input — the exact reserveSchema + resolveReserveItems
+ * the server action runs. Does NOT send email (that's the live test you trigger).
  */
 import { config } from "dotenv";
 import { createClient } from "@supabase/supabase-js";
-import { reserveSchema, resolveReserveFlavor } from "../lib/reserve-core";
+import { reserveSchema, resolveReserveItems } from "../lib/reserve-core";
 import type { Drop } from "../lib/types";
 
 config({ path: ".env.local" });
@@ -43,52 +43,76 @@ async function run() {
     console.error("No active drop — run `npm run seed` first.");
     process.exit(1);
   }
-  const available = drop.flavors.find((f) => !f.sold_out);
+  const available = drop.flavors.filter((f) => !f.sold_out);
   const soldOut = drop.flavors.find((f) => f.sold_out);
-  check("active drop has an available + a sold-out flavor", !!available && !!soldOut,
-    `available=${available?.name}, soldOut=${soldOut?.name}`);
-  if (!available || !soldOut) process.exit(1);
+  check("active drop has at least one available flavor", available.length > 0,
+    `available=${available.map((f) => f.name).join(", ")}`);
+  if (available.length === 0) process.exit(1);
 
   // 1) Authoritative rejection of a SOLD-OUT flavor (client bypass simulated).
-  const soldRes = resolveReserveFlavor(drop, soldOut.id);
-  check("server-side rejects SOLD-OUT flavor", soldRes.ok === false,
-    soldRes.ok ? "accepted!" : soldRes.message);
+  if (soldOut) {
+    const soldRes = resolveReserveItems(drop, [{ flavorId: soldOut.id, quantity: 1 }]);
+    check("server-side rejects a SOLD-OUT flavor", soldRes.ok === false,
+      soldRes.ok ? "accepted!" : soldRes.message);
+  } else {
+    console.log("  (no sold-out flavor seeded — skipping sold-out rejection check)");
+  }
 
-  // 1b) Rejection of an unknown flavor id and of invalid input.
-  const unknownRes = resolveReserveFlavor(drop, "00000000-0000-0000-0000-000000000000");
-  check("server-side rejects unknown flavor", unknownRes.ok === false);
-  const badInput = reserveSchema.safeParse({ name: "A", contact: "nope", flavorId: available.id, quantity: 99 });
-  check("schema rejects bad input (short name / bad contact / qty>10)", badInput.success === false,
+  // 1b) Rejection of an unknown flavor id, and of invalid input.
+  const unknownRes = resolveReserveItems(drop, [
+    { flavorId: "00000000-0000-0000-0000-000000000000", quantity: 1 },
+  ]);
+  check("server-side rejects an unknown flavor", unknownRes.ok === false);
+
+  const badInput = reserveSchema.safeParse({
+    name: "A",
+    contact: "nope",
+    items: [{ flavorId: available[0].id, quantity: 0 }],
+  });
+  check("schema rejects bad input (short name / bad contact / no qty)", badInput.success === false,
     badInput.success ? "accepted!" : Object.keys(badInput.error.flatten().fieldErrors).join(","));
 
-  // 2) HAPPY PATH — validate, resolve, INSERT, confirm row lands, clean up.
+  // 2) HAPPY PATH — multi-flavor: validate, resolve, INSERT parent + items, read, clean up.
   const marker = `verify-reserve-${Date.now()}`;
-  const goodInput = reserveSchema.safeParse({
-    name: marker, contact: "tester@example.com", flavorId: available.id, quantity: 2,
-  });
-  check("schema accepts valid input", goodInput.success);
-  const goodRes = resolveReserveFlavor(drop, available.id);
-  check("server-side accepts available flavor", goodRes.ok === true);
+  const wanted = available.slice(0, 2); // up to two flavors
+  const items = wanted.map((f, i) => ({ flavorId: f.id, quantity: (i + 1) * 2 })); // 2, 4, ...
+  const goodInput = reserveSchema.safeParse({ name: marker, contact: "tester@example.com", items });
+  check("schema accepts a valid multi-flavor order", goodInput.success);
+  const goodRes = resolveReserveItems(drop, items);
+  check("server-side accepts the available flavors", goodRes.ok === true,
+    goodRes.ok ? `${goodRes.items.length} item(s)` : goodRes.message);
 
   if (goodInput.success && goodRes.ok) {
-    const { error: insErr } = await db.from("interest_submissions").insert({
-      drop_id: drop.id,
-      flavor_id: goodRes.flavor.id,
-      name: goodInput.data.name,
-      contact: goodInput.data.contact,
-      quantity: goodInput.data.quantity,
-    });
-    check("reserve row INSERTS into Supabase", !insErr, insErr?.message);
-
-    const { data: rows } = await db
+    const { data: parent, error: pErr } = await db
       .from("interest_submissions")
-      .select("id, name, flavor_id, quantity")
-      .eq("name", marker);
-    check("reserve row is READABLE in Supabase (service role)", (rows?.length ?? 0) === 1,
-      `found ${rows?.length ?? 0} row(s), qty=${rows?.[0]?.quantity}`);
+      .insert({ drop_id: drop.id, name: marker, contact: "tester@example.com" })
+      .select("id")
+      .single();
+    check("parent reserve row INSERTS", !pErr && !!parent, pErr?.message);
 
-    await db.from("interest_submissions").delete().eq("name", marker);
-    console.log("  (cleaned up test row)");
+    if (parent) {
+      const { error: iErr } = await db.from("interest_items").insert(
+        goodRes.items.map(({ flavor, quantity }) => ({
+          submission_id: parent.id,
+          flavor_id: flavor.id,
+          flavor_name: flavor.name,
+          quantity,
+        })),
+      );
+      check("per-flavor line items INSERT", !iErr, iErr?.message);
+
+      const { data: rows } = await db
+        .from("interest_items")
+        .select("flavor_name, quantity")
+        .eq("submission_id", parent.id)
+        .order("created_at", { ascending: true });
+      check("line items are READABLE (service role)", (rows?.length ?? 0) === goodRes.items.length,
+        `found ${rows?.length ?? 0}: ${(rows ?? []).map((r) => `${r.flavor_name}×${r.quantity}`).join(", ")}`);
+
+      // Cascade delete removes the children too.
+      await db.from("interest_submissions").delete().eq("id", parent.id);
+      console.log("  (cleaned up test rows)");
+    }
   }
 
   console.log(`\n${failures === 0 ? "All reserve checks passed." : `${failures} check(s) FAILED.`}`);

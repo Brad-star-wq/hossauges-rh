@@ -8,6 +8,7 @@ export default async function AdminGalleryPage() {
     home_hero_url: map.home_hero_url ?? "",
     about_hero_url: map.about_hero_url ?? "",
     about_paragraph: map.about_paragraph ?? DEFAULT_ABOUT_PARAGRAPH,
+    home_story_image: map.home_story_image ?? "",
   };
   return <GalleryManager content={content} items={items} />;
 }

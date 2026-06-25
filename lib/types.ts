@@ -71,6 +71,8 @@ export type SiteContent = {
   home_hero_url: string;
   about_hero_url: string;
   about_paragraph: string;
+  /** Home "Our Story" teaser photo (Round 9). Empty → placeholder. */
+  home_story_image: string;
 };
 
 export const DEFAULT_ABOUT_PARAGRAPH =
@@ -80,6 +82,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
   home_hero_url: "",
   about_hero_url: "",
   about_paragraph: DEFAULT_ABOUT_PARAGRAPH,
+  home_story_image: "",
 };
 
 /** Typed result every server action returns — forms render these, never throw. */

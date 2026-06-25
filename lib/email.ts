@@ -23,18 +23,20 @@ function resend(): Resend | null {
   return new Resend(key);
 }
 
+export type ReserveEmailItem = { flavorName: string; quantity: number };
+
 export type ReserveEmailInput = {
-  flavorName: string;
-  meatTypeLabel: string;
   weekLabel: string;
   customerName: string;
   contact: string;
-  quantity: number;
+  /** One or more flavors, each with its quantity (Round 9: multi-flavor order). */
+  items: ReserveEmailItem[];
 };
 
 /**
  * Email the owners about a new reserve. Returns { sent }. Never throws — a mail
- * failure must not fail the reservation (the row is already saved).
+ * failure must not fail the reservation (the row is already saved). Lists every
+ * flavor + quantity from the one combined order.
  */
 export async function sendReserveEmail(
   input: ReserveEmailInput,
@@ -43,7 +45,19 @@ export async function sendReserveEmail(
   if (!client) return { sent: false, error: "RESEND_API_KEY not set" };
 
   const contactIsEmail = EMAIL_RE.test(input.contact);
-  const subject = `New reserve — ${input.flavorName} ×${input.quantity}`;
+  const summary = input.items.map((i) => `${i.flavorName} ×${i.quantity}`).join(", ");
+  const totalPacks = input.items.reduce((n, i) => n + i.quantity, 0);
+  const subject = `New reserve — ${summary}`;
+
+  const itemRows = input.items
+    .map(
+      (i) => `
+          <tr>
+            <td style="padding:6px 0;border-top:1px solid #2C4A6622">${escapeHtml(i.flavorName)}</td>
+            <td style="padding:6px 0;border-top:1px solid #2C4A6622;text-align:right;white-space:nowrap">&times;${i.quantity} &middot; 3-pack</td>
+          </tr>`,
+    )
+    .join("");
 
   const html = `
   <div style="font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;background:#F7F3EA;color:#20242B;padding:24px">
@@ -53,15 +67,18 @@ export async function sendReserveEmail(
       </div>
       <div style="padding:20px">
         <p style="margin:0 0 4px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#E2552C">
-          ${escapeHtml(input.weekLabel)} · ${escapeHtml(input.meatTypeLabel)}
+          ${escapeHtml(input.weekLabel)}
         </p>
-        <h1 style="margin:0 0 16px;font-size:24px;color:#2C4A66;text-transform:uppercase">
-          ${escapeHtml(input.flavorName)} &times;${input.quantity}
+        <h1 style="margin:0 0 16px;font-size:22px;color:#2C4A66;text-transform:uppercase">
+          ${input.items.length} flavor${input.items.length === 1 ? "" : "s"} &middot; ${totalPacks} pack${totalPacks === 1 ? "" : "s"}
         </h1>
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <tr><td style="padding:6px 0;color:#6B7280;width:110px">Name</td><td style="padding:6px 0">${escapeHtml(input.customerName)}</td></tr>
           <tr><td style="padding:6px 0;color:#6B7280">Contact</td><td style="padding:6px 0">${escapeHtml(input.contact)}</td></tr>
-          <tr><td style="padding:6px 0;color:#6B7280">Quantity</td><td style="padding:6px 0">${input.quantity} × 3-pack</td></tr>
+        </table>
+        <p style="margin:18px 0 4px;font-size:11px;letter-spacing:0.2em;text-transform:uppercase;color:#6B7280">Order</p>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          ${itemRows}
         </table>
       </div>
       <div style="border-top:1px solid #2C4A6633;padding:12px 20px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:#6B7280">

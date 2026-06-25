@@ -7,8 +7,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getActiveDrop } from "@/lib/queries";
 import { sendReserveEmail, sendPreorderEmail } from "@/lib/email";
 import { checkReserveRateLimit } from "@/lib/rate-limit";
-import { reserveSchema, resolveReserveFlavor, isEmailOrPhone } from "@/lib/reserve-core";
-import { meatTypeLabel, type ActionResult } from "@/lib/types";
+import { reserveSchema, resolveReserveItems, summarizeItems, isEmailOrPhone } from "@/lib/reserve-core";
+import { type ActionResult } from "@/lib/types";
 
 /** Map a ZodError to our flat fieldErrors shape. */
 function fieldErrorsFrom(error: z.ZodError): Record<string, string> {
@@ -41,13 +41,13 @@ export async function reserveSubmit(input: unknown): Promise<ActionResult> {
         fieldErrors: fieldErrorsFrom(parsed.error),
       };
     }
-    const { name, contact, flavorId, quantity } = parsed.data;
+    const { name, contact, items } = parsed.data;
 
-    // Authoritative server-side check: flavor must belong to the active drop
-    // and not be sold out — even if the client was bypassed.
+    // Authoritative server-side check: every chosen flavor must belong to the
+    // active drop and not be sold out — even if the client was bypassed.
     const drop = await getActiveDrop();
     if (!drop) return { ok: false, message: "There's no active drop right now." };
-    const resolved = resolveReserveFlavor(drop, flavorId);
+    const resolved = resolveReserveItems(drop, items);
     if (!resolved.ok) {
       return {
         ok: false,
@@ -55,7 +55,7 @@ export async function reserveSubmit(input: unknown): Promise<ActionResult> {
         ...(resolved.fieldErrors ? { fieldErrors: resolved.fieldErrors } : {}),
       };
     }
-    const flavor = resolved.flavor;
+    const lineItems = resolved.items;
 
     // Rate limit: 5/hour/IP (cross-instance via submission_guard).
     const { allowed } = await checkReserveRateLimit(await callerIp());
@@ -66,31 +66,49 @@ export async function reserveSubmit(input: unknown): Promise<ActionResult> {
       };
     }
 
-    const { error: insertError } = await supabaseAdmin
+    // One combined submission: a parent row + a child row per flavor.
+    const { data: parent, error: parentError } = await supabaseAdmin
       .from("interest_submissions")
-      .insert({
-        drop_id: drop.id,
-        flavor_id: flavor.id,
-        name,
-        contact,
-        quantity,
-      });
-    if (insertError) {
-      console.error("[reserveSubmit] insert failed:", insertError.message);
+      .insert({ drop_id: drop.id, name, contact })
+      .select("id")
+      .single();
+    if (parentError || !parent) {
+      console.error("[reserveSubmit] parent insert failed:", parentError?.message);
       return {
         ok: false,
         message: "Something went wrong saving your reservation. Try again.",
       };
     }
 
-    // Email is best-effort — the reservation is already saved.
+    const { error: itemsError } = await supabaseAdmin.from("interest_items").insert(
+      lineItems.map(({ flavor, quantity }) => ({
+        submission_id: parent.id,
+        flavor_id: flavor.id,
+        flavor_name: flavor.name,
+        quantity,
+      })),
+    );
+    if (itemsError) {
+      console.error("[reserveSubmit] items insert failed:", itemsError.message);
+      // Roll back the orphaned parent so we never store a reservation with no
+      // line items (best-effort).
+      await supabaseAdmin.from("interest_submissions").delete().eq("id", parent.id);
+      return {
+        ok: false,
+        message: "Something went wrong saving your reservation. Try again.",
+      };
+    }
+
+    // ONE owner email listing every flavor + quantity. Best-effort — the
+    // reservation is already saved.
     const email = await sendReserveEmail({
-      flavorName: flavor.name,
-      meatTypeLabel: meatTypeLabel(flavor.meat_type),
       weekLabel: drop.week_label,
       customerName: name,
       contact,
-      quantity,
+      items: lineItems.map(({ flavor, quantity }) => ({
+        flavorName: flavor.name,
+        quantity,
+      })),
     });
     if (!email.sent) {
       console.warn("[reserveSubmit] owner email not sent:", email.error);
@@ -98,7 +116,7 @@ export async function reserveSubmit(input: unknown): Promise<ActionResult> {
 
     return {
       ok: true,
-      message: "You're on the list — we'll reach out to confirm pickup.",
+      message: `Reserved: ${summarizeItems(lineItems)}. We'll reach out to confirm pickup.`,
     };
   } catch (err) {
     console.error("[reserveSubmit] unexpected:", err);

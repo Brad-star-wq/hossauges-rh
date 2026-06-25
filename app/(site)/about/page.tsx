@@ -4,7 +4,7 @@ import { Button } from "@/components/button";
 import { Placeholder } from "@/components/placeholder";
 import { Section } from "@/components/section";
 import { Gallery } from "@/components/gallery";
-import { getSiteContent, getGallery } from "@/lib/queries";
+import { getSiteContent, getSiteText, getGallery } from "@/lib/queries";
 
 export const metadata: Metadata = {
   title: "About",
@@ -14,7 +14,11 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 export default async function AboutPage() {
-  const [content, gallery] = await Promise.all([getSiteContent(), getGallery()]);
+  const [content, text, gallery] = await Promise.all([
+    getSiteContent(),
+    getSiteText(),
+    getGallery(),
+  ]);
 
   return (
     <>
@@ -25,10 +29,10 @@ export default async function AboutPage() {
           <div className="mt-8 grid items-center gap-10 md:grid-cols-2">
             <div>
               <h1 className="font-display text-5xl font-extrabold uppercase leading-[0.95] text-navy sm:text-6xl">
-                Three friends, a smoker.
+                {text.about_title}
               </h1>
-              <p className="mt-5 max-w-prose text-lg text-char">
-                {content.about_paragraph}
+              <p className="mt-5 max-w-prose whitespace-pre-line text-lg text-char">
+                {text.about_paragraph}
               </p>
             </div>
             {content.about_hero_url ? (

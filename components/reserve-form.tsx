@@ -3,47 +3,60 @@
 import { useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { reserveSubmit } from "@/app/actions";
-import { type DropFlavor } from "@/lib/types";
+import { meatTypeLabel, type DropFlavor } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_QTY = 1;
-const MAX_QTY = 10;
 
-type Errors = { name?: string; contact?: string; flavor?: string };
+type Errors = { name?: string; contact?: string; items?: string };
 
 /** Looks like an email OR a 10-digit phone number. */
 function isValidContact(value: string): boolean {
   if (EMAIL_RE.test(value)) return true;
-  const digits = value.replace(/\D/g, "");
-  return digits.length === 10;
+  return value.replace(/\D/g, "").length === 10;
 }
 
 /**
- * Reserve form. Client-side validation for fast feedback, then the
- * reserveSubmit server action is authoritative (re-checks sold-out etc.).
- * Renders the action's typed result inline — never throws.
+ * Multi-flavor reserve form (Round 9). Each flavor on the board gets its own
+ * quantity (default 0; sold-out locked at 0). The customer can order several
+ * flavors at once; submit sends ONE combined order. Client-side validation is
+ * for fast feedback — the reserveSubmit server action is authoritative.
+ *
+ * Used on /drop (all flavors) and /flavors/[id] (a single flavor). When there's
+ * just one selectable flavor it defaults to qty 1 for a smoother single-flavor page.
  */
 export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
   const selectable = flavors.filter((f) => !f.sold_out);
 
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
-  const [flavorId, setFlavorId] = useState(selectable[0]?.id ?? "");
-  const [qty, setQty] = useState(1);
+  const [qtys, setQtys] = useState<Record<string, number>>(() =>
+    Object.fromEntries(
+      flavors.map((f) => [f.id, selectable.length === 1 && !f.sold_out ? 1 : 0]),
+    ),
+  );
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [reserved, setReserved] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  function setQty(id: string, value: number) {
+    setQtys((prev) => ({ ...prev, [id]: Math.max(0, Math.floor(value) || 0) }));
+  }
+
+  function chosenItems() {
+    return flavors
+      .filter((f) => (qtys[f.id] ?? 0) > 0)
+      .map((f) => ({ flavor: f, quantity: qtys[f.id] }));
+  }
 
   function validate(): Errors {
     const next: Errors = {};
     if (name.trim().length < 2) next.name = "Tell us your name.";
     if (!isValidContact(contact))
       next.contact = "Enter an email or a 10-digit phone number.";
-    const chosen = flavors.find((f) => f.id === flavorId);
-    if (!chosen || chosen.sold_out)
-      next.flavor = "Pick a flavor that's still available.";
+    if (chosenItems().length === 0)
+      next.items = "Add a quantity to at least one flavor.";
     return next;
   }
 
@@ -54,27 +67,27 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
+    const items = flavors.map((f) => ({ flavorId: f.id, quantity: qtys[f.id] ?? 0 }));
+    const summary = chosenItems()
+      .map((i) => `${i.flavor.name} ×${i.quantity}`)
+      .join(", ");
+
     startTransition(async () => {
-      const res = await reserveSubmit({ name, contact, flavorId, quantity: qty });
+      const res = await reserveSubmit({ name, contact, items });
       if (res.ok) {
-        setSubmitted(true);
+        setReserved(summary);
         return;
       }
-      // Surface server-side field errors (e.g. sold-out caught server-side).
       setErrors({
         name: res.fieldErrors?.name,
         contact: res.fieldErrors?.contact,
-        flavor: res.fieldErrors?.flavor,
+        items: res.fieldErrors?.items,
       });
       setFormError(res.message);
     });
   }
 
-  function setQtyClamped(v: number) {
-    setQty(Math.max(MIN_QTY, Math.min(MAX_QTY, v)));
-  }
-
-  if (submitted) {
+  if (reserved) {
     return (
       <motion.div
         role="status"
@@ -89,7 +102,8 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
           We&apos;ll reach out to confirm pickup.
         </p>
         <p className="mt-3 text-char">
-          Thanks for reserving — keep an eye on your phone or inbox.
+          You reserved <span className="font-mono text-navy">{reserved}</span>. Keep
+          an eye on your phone or inbox.
         </p>
       </motion.div>
     );
@@ -111,7 +125,8 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
         Reserve your packs
       </h2>
       <p className="mt-2 text-sm text-smoke">
-        No payment now — we&apos;ll confirm pickup with you directly.
+        Set how many 3-packs of each flavor you want — no payment now, we&apos;ll
+        confirm pickup with you directly.
       </p>
 
       <div className="mt-6 grid gap-5">
@@ -149,69 +164,70 @@ export function ReserveForm({ flavors }: { flavors: DropFlavor[] }) {
           {errors.contact && <p role="alert" className={errCls}>{errors.contact}</p>}
         </div>
 
-        {/* Flavor */}
+        {/* Per-flavor quantities */}
         <div>
-          <label htmlFor="rsv-flavor" className={labelCls}>
-            Flavor
-          </label>
-          <select
-            id="rsv-flavor"
-            value={flavorId}
-            onChange={(e) => setFlavorId(e.target.value)}
-            aria-invalid={!!errors.flavor}
-            className={cn(fieldCls, "appearance-none", errors.flavor && "border-ember")}
-          >
-            {flavors.map((f) => (
-              <option
-                key={f.id}
-                value={f.id}
-                disabled={f.sold_out}
-                className={f.sold_out ? "text-smoke line-through" : undefined}
-              >
-                {f.name}
-                {f.sold_out ? " — SOLD OUT" : ""}
-              </option>
-            ))}
-          </select>
-          {errors.flavor && <p role="alert" className={errCls}>{errors.flavor}</p>}
-        </div>
+          <span className={labelCls}>Flavors &amp; quantities</span>
+          <ul className="mt-2 flex flex-col divide-y divide-navy/10 border border-navy/20">
+            {flavors.map((f) => {
+              const qty = qtys[f.id] ?? 0;
+              return (
+                <li
+                  key={f.id}
+                  className={cn(
+                    "flex items-center justify-between gap-3 p-3",
+                    f.sold_out && "opacity-60",
+                  )}
+                >
+                  <div className="min-w-0">
+                    <p className="font-display truncate text-lg font-bold uppercase leading-tight text-navy">
+                      {f.name}
+                    </p>
+                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-smoke">
+                      {f.sold_out ? "Sold out" : meatTypeLabel(f.meat_type)}
+                    </p>
+                  </div>
 
-        {/* Quantity stepper */}
-        <div>
-          <span className={labelCls} id="rsv-qty-label">
-            How many 3-packs?
-          </span>
-          <div
-            className="mt-2 flex items-center gap-4"
-            role="group"
-            aria-labelledby="rsv-qty-label"
-          >
-            <button
-              type="button"
-              onClick={() => setQtyClamped(qty - 1)}
-              disabled={qty <= MIN_QTY}
-              aria-label="Decrease quantity"
-              className="font-mono flex size-11 items-center justify-center border border-navy/40 text-xl text-navy transition-colors hover:border-ember hover:text-ember disabled:opacity-30"
-            >
-              −
-            </button>
-            <span
-              className="font-mono min-w-[2ch] text-center text-xl text-char"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {qty}
-            </span>
-            <button
-              type="button"
-              onClick={() => setQtyClamped(qty + 1)}
-              disabled={qty >= MAX_QTY}
-              aria-label="Increase quantity"
-              className="font-mono flex size-11 items-center justify-center border border-navy/40 text-xl text-navy transition-colors hover:border-ember hover:text-ember disabled:opacity-30"
-            >
-              +
-            </button>
-          </div>
+                  {f.sold_out ? (
+                    <span className="font-mono shrink-0 text-[0.6rem] uppercase tracking-[0.16em] text-ember">
+                      ★ Sold out
+                    </span>
+                  ) : (
+                    <div
+                      className="flex shrink-0 items-center gap-3"
+                      role="group"
+                      aria-label={`Quantity of ${f.name}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setQty(f.id, qty - 1)}
+                        disabled={qty <= 0}
+                        aria-label={`Decrease ${f.name}`}
+                        className="font-mono flex size-10 items-center justify-center border border-navy/40 text-xl text-navy transition-colors hover:border-ember hover:text-ember disabled:opacity-30"
+                      >
+                        −
+                      </button>
+                      <span
+                        className="font-mono min-w-[2ch] text-center text-lg text-char"
+                        aria-live="polite"
+                        aria-atomic="true"
+                      >
+                        {qty}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setQty(f.id, qty + 1)}
+                        aria-label={`Increase ${f.name}`}
+                        className="font-mono flex size-10 items-center justify-center border border-navy/40 text-xl text-navy transition-colors hover:border-ember hover:text-ember"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {errors.items && <p role="alert" className={errCls}>{errors.items}</p>}
         </div>
 
         {formError && (

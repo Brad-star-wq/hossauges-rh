@@ -52,12 +52,24 @@ function SubmissionCard({ row }: { row: SubmissionRow }) {
         </span>
       </div>
 
-      <p className="font-mono mt-3 text-sm text-char">
-        {row.flavor_name ?? "—"} <span className="text-smoke">×{row.quantity}</span>
-        {row.week_label && (
-          <span className="text-smoke"> · {row.week_label}</span>
+      <div className="mt-3">
+        {row.items.length === 0 ? (
+          <p className="font-mono text-sm text-smoke">—</p>
+        ) : (
+          <ul className="font-mono flex flex-col gap-0.5 text-sm text-char">
+            {row.items.map((it, i) => (
+              <li key={i}>
+                {it.flavor_name} <span className="text-smoke">×{it.quantity}</span>
+              </li>
+            ))}
+          </ul>
         )}
-      </p>
+        {row.week_label && (
+          <p className="font-mono mt-1 text-[0.6rem] uppercase tracking-[0.14em] text-smoke">
+            {row.week_label}
+          </p>
+        )}
+      </div>
 
       <label className="mt-3 flex min-h-11 items-center gap-3">
         <input

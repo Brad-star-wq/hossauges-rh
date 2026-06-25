@@ -20,10 +20,12 @@ function HeroField({
   contentKey,
   label,
   value,
+  ratio = "16/9",
 }: {
-  contentKey: "home_hero_url" | "about_hero_url";
+  contentKey: "home_hero_url" | "about_hero_url" | "home_story_image";
   label: string;
   value: string;
+  ratio?: string;
 }) {
   const router = useRouter();
   const [url, setUrl] = useState(value);
@@ -44,7 +46,7 @@ function HeroField({
         <PhotoUpload
           folder="hero"
           value={url || null}
-          ratio="16/9"
+          ratio={ratio}
           label={label}
           onUploaded={persist}
         />
@@ -216,7 +218,12 @@ export function GalleryManager({
   content,
   items,
 }: {
-  content: { home_hero_url: string; about_hero_url: string; about_paragraph: string };
+  content: {
+    home_hero_url: string;
+    about_hero_url: string;
+    about_paragraph: string;
+    home_story_image: string;
+  };
   items: GalleryItem[];
 }) {
   return (
@@ -225,10 +232,19 @@ export function GalleryManager({
         <h1 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
           Gallery &amp; Content
         </h1>
-        <p className="mt-1 text-sm text-smoke">Photos, the About story, and the homepage hero.</p>
+        <p className="mt-1 text-sm text-smoke">
+          Photos, the About story, and the homepage hero. (Text lives in the{" "}
+          <span className="font-mono">Site Text</span> tab.)
+        </p>
       </div>
 
       <HeroField contentKey="home_hero_url" label="Home hero photo" value={content.home_hero_url} />
+      <HeroField
+        contentKey="home_story_image"
+        label="Home “Our Story” photo"
+        value={content.home_story_image}
+        ratio="4/3"
+      />
       <HeroField contentKey="about_hero_url" label="About hero photo" value={content.about_hero_url} />
       <ParagraphField value={content.about_paragraph} />
       <GallerySection items={items} />

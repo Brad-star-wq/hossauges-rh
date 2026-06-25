@@ -318,7 +318,12 @@ export async function uploadPhoto(
 
 // ── Gallery & editable content ───────────────────────────────────────────────
 
-const CONTENT_KEYS = new Set(["home_hero_url", "about_hero_url", "about_paragraph"]);
+const CONTENT_KEYS = new Set([
+  "home_hero_url",
+  "about_hero_url",
+  "about_paragraph",
+  "home_story_image",
+]);
 
 function revalidateContent() {
   revalidatePath("/");

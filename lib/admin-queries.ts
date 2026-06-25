@@ -75,19 +75,23 @@ export async function getFlavorPhotos(
   return out;
 }
 
+export type SubmissionItem = { flavor_name: string; quantity: number };
+
 export type SubmissionRow = {
   id: string;
   name: string;
   contact: string;
-  quantity: number;
   contacted: boolean;
   created_at: string;
   drop_id: string | null;
-  flavor_name: string | null;
   week_label: string | null;
+  /** Per-flavor line items (Round 9). Old single-flavor rows yield one item. */
+  items: SubmissionItem[];
 };
 
 export async function getSubmissions(dropId?: string): Promise<SubmissionRow[]> {
+  // Parent rows + legacy single-flavor columns (drop_flavors/quantity) for
+  // back-compat with pre-Round-9 submissions.
   let q = supabaseAdmin
     .from("interest_submissions")
     .select(
@@ -103,25 +107,56 @@ export async function getSubmissions(dropId?: string): Promise<SubmissionRow[]> 
     id: string;
     name: string;
     contact: string;
-    quantity: number;
+    quantity: number | null;
     contacted: boolean;
     created_at: string;
     drop_id: string | null;
     drop_flavors: { name: string } | null;
     drops: { week_label: string } | null;
   };
+  const parents = (data ?? []) as unknown as Raw[];
 
-  return ((data ?? []) as unknown as Raw[]).map((r) => ({
-    id: r.id,
-    name: r.name,
-    contact: r.contact,
-    quantity: r.quantity,
-    contacted: r.contacted,
-    created_at: r.created_at,
-    drop_id: r.drop_id,
-    flavor_name: r.drop_flavors?.name ?? null,
-    week_label: r.drops?.week_label ?? null,
-  }));
+  // Line items (Round 9) in one batch. Resilient to the table not existing yet
+  // (pre-migration): on error we fall back to the legacy columns only.
+  const itemsBySubmission = new Map<string, SubmissionItem[]>();
+  if (parents.length > 0) {
+    const { data: itemRows, error: itemErr } = await supabaseAdmin
+      .from("interest_items")
+      .select("submission_id, flavor_name, quantity, created_at")
+      .in("submission_id", parents.map((p) => p.id))
+      .order("created_at", { ascending: true });
+    if (!itemErr && itemRows) {
+      for (const it of itemRows as unknown as {
+        submission_id: string;
+        flavor_name: string;
+        quantity: number;
+      }[]) {
+        const list = itemsBySubmission.get(it.submission_id) ?? [];
+        list.push({ flavor_name: it.flavor_name, quantity: it.quantity });
+        itemsBySubmission.set(it.submission_id, list);
+      }
+    }
+  }
+
+  return parents.map((r) => {
+    const items = itemsBySubmission.get(r.id);
+    return {
+      id: r.id,
+      name: r.name,
+      contact: r.contact,
+      contacted: r.contacted,
+      created_at: r.created_at,
+      drop_id: r.drop_id,
+      week_label: r.drops?.week_label ?? null,
+      items:
+        items && items.length > 0
+          ? items
+          : // Legacy single-flavor row → one synthesized line item.
+            r.drop_flavors?.name && r.quantity != null
+            ? [{ flavor_name: r.drop_flavors.name, quantity: r.quantity }]
+            : [],
+    };
+  });
 }
 
 export type DropOption = { id: string; week_label: string; status: string };
