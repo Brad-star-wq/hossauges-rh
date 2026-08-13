@@ -13,14 +13,20 @@ import {
   markPreorderContacted,
 } from "@/app/admin/actions";
 import { PhotoUpload } from "@/components/admin/photo-upload";
+import {
+  PageHeader,
+  Label,
+  Field,
+  Button,
+  Card,
+  Toggle,
+  StatusLine,
+} from "@/components/admin/ui";
 import { type PreorderItem, PREORDER_MAX_ITEMS } from "@/lib/types";
 import type { PreorderSignup } from "@/lib/admin-queries";
 import { cn } from "@/lib/cn";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const labelCls = "font-mono block text-[0.65rem] uppercase tracking-[0.18em] text-navy";
-const fieldCls =
-  "mt-1 w-full border border-navy/30 bg-paper px-3 py-3 text-base text-char focus-visible:border-ember";
 
 function contactHref(c: string) {
   return EMAIL_RE.test(c) ? `mailto:${c}` : `tel:${c.replace(/[^\d+]/g, "")}`;
@@ -34,8 +40,7 @@ function EnableToggle({ enabled }: { enabled: boolean }) {
   const router = useRouter();
   const [on, setOn] = useState(enabled);
   const [, start] = useTransition();
-  function toggle() {
-    const next = !on;
+  function toggle(next: boolean) {
     setOn(next);
     start(async () => {
       const res = await setPreorderEnabled(next);
@@ -46,51 +51,37 @@ function EnableToggle({ enabled }: { enabled: boolean }) {
     });
   }
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      onClick={toggle}
-      className={cn(
-        "flex min-h-12 items-center justify-between border-2 px-4 transition-colors",
-        on ? "border-ember bg-ember/10" : "border-navy/30 bg-paper",
-      )}
-    >
-      <span className="font-mono text-xs uppercase tracking-[0.16em] text-navy">
-        Pop-up is {on ? "ON" : "OFF"}
-      </span>
-      <span className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-smoke">
-        tap to turn {on ? "off" : "on"}
-      </span>
-    </button>
+    <Toggle checked={on} onChange={toggle}>
+      <span className="text-sm text-navy">Pop-up is {on ? "on" : "off"}</span>
+      <span className="text-xs text-smoke">tap to turn {on ? "off" : "on"}</span>
+    </Toggle>
   );
 }
 
 function TitleField({ title }: { title: string }) {
   const router = useRouter();
   const [value, setValue] = useState(title);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
   function save() {
-    setMsg(null);
+    setResult(null);
     start(async () => {
       const res = await setPreorderTitle(value);
-      setMsg(res.message);
+      setResult({ ok: res.ok, message: res.message });
       if (res.ok) router.refresh();
     });
   }
   return (
-    <div className="border border-navy/20 bg-paper p-4">
-      <label htmlFor="po-title" className={labelCls}>Pop-up title</label>
-      <input id="po-title" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Holiday Pre-Order" className={fieldCls} />
+    <Card>
+      <Label htmlFor="po-title">Pop-up title</Label>
+      <Field id="po-title" value={value} onChange={(e) => setValue(e.target.value)} placeholder="Holiday Pre-Order" className="mt-1" />
       <div className="mt-2 flex items-center gap-3">
-        <button type="button" onClick={save} disabled={pending}
-          className="font-mono min-h-11 bg-ember-press px-4 text-[0.65rem] uppercase tracking-[0.16em] text-cream hover:bg-navy disabled:opacity-60">
+        <Button type="button" variant="primary" onClick={save} disabled={pending}>
           {pending ? "Saving…" : "Save title"}
-        </button>
-        {msg && <span className="font-mono text-[0.6rem] uppercase tracking-[0.12em] text-smoke">{msg}</span>}
+        </Button>
+        <StatusLine result={result} />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -135,20 +126,20 @@ function ItemRow({ item, first, last }: { item: PreorderItem; first: boolean; la
         <PhotoUpload folder="preorder" value={item.photo_url} ratio="1/1" label="Item photo" onUploaded={setPhoto} />
       </div>
       <div className="min-w-0 flex-1">
-        <input
+        <Field
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={saveName}
           aria-label="Item name"
-          className="w-full border border-navy/30 bg-paper px-2 py-2 text-sm text-char focus-visible:border-ember"
+          className="px-2 py-2 text-sm"
         />
         <div className="mt-2 flex gap-1">
           <button type="button" onClick={() => move("up")} disabled={pending || first} aria-label="Move up"
-            className="font-mono min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↑</button>
+            className="min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↑</button>
           <button type="button" onClick={() => move("down")} disabled={pending || last} aria-label="Move down"
-            className="font-mono min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↓</button>
+            className="min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↓</button>
           <button type="button" onClick={remove} disabled={pending} aria-label="Delete"
-            className="font-mono ml-auto min-h-9 border border-ember/50 px-2 text-ember hover:bg-ember hover:text-cream disabled:opacity-50">✕</button>
+            className="ml-auto min-h-9 border border-ember/50 px-2 text-ember hover:bg-ember hover:text-cream disabled:opacity-50">✕</button>
         </div>
       </div>
     </li>
@@ -177,9 +168,9 @@ function ItemsSection({ items }: { items: PreorderItem[] }) {
   }
 
   return (
-    <div className="border border-navy/20 bg-paper p-4">
+    <Card>
       <div className="flex items-center justify-between gap-3">
-        <span className={labelCls}>Menu items ({items.length}/{PREORDER_MAX_ITEMS})</span>
+        <Label>Menu items <span className="tabular-nums">({items.length}/{PREORDER_MAX_ITEMS})</span></Label>
       </div>
 
       {items.length > 0 && (
@@ -191,30 +182,24 @@ function ItemsSection({ items }: { items: PreorderItem[] }) {
       )}
 
       {atMax ? (
-        <p className="font-mono mt-3 text-[0.6rem] uppercase tracking-[0.12em] text-smoke">
+        <p className="mt-3 text-xs text-smoke">
           That&apos;s the max of {PREORDER_MAX_ITEMS} items. Delete one to add another.
         </p>
       ) : (
         <div className="mt-3 flex gap-2">
-          <input
+          <Field
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="New item name"
-            className="min-w-0 flex-1 border border-navy/30 bg-paper px-3 py-3 text-sm text-char focus-visible:border-ember"
+            className="min-w-0 flex-1 text-sm"
           />
-          <button type="button" onClick={add} disabled={pending || !newName.trim()}
-            className="font-mono shrink-0 bg-ember-press px-4 text-[0.65rem] uppercase tracking-[0.16em] text-cream hover:bg-navy disabled:opacity-50">
+          <Button type="button" variant="primary" onClick={add} disabled={pending || !newName.trim()} className="shrink-0">
             + Add
-          </button>
+          </Button>
         </div>
       )}
-      {!atMax && (
-        <p className="font-mono mt-2 text-[0.55rem] uppercase tracking-[0.1em] text-smoke">
-          Add the item, then upload its photo from the row above.
-        </p>
-      )}
-      {err && <p role="alert" className="font-mono mt-2 text-[0.6rem] uppercase tracking-[0.12em] text-ember">{err}</p>}
-    </div>
+      <StatusLine result={err ? { ok: false, message: err } : null} className="mt-2" />
+    </Card>
   );
 }
 
@@ -229,22 +214,22 @@ function SignupCard({ row }: { row: PreorderSignup }) {
     });
   }
   return (
-    <div className={cn("border border-navy/20 bg-paper p-4", contacted && "opacity-70")}>
+    <Card className={cn(contacted && "opacity-70")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-lg font-bold uppercase leading-tight text-navy">{row.name}</p>
-          <a href={contactHref(row.contact)} className="font-mono text-sm text-ember underline-offset-2 hover:underline">
+          <p className="text-base font-bold text-navy-deep">{row.name}</p>
+          <a href={contactHref(row.contact)} className="text-sm text-navy-deep underline-offset-2 hover:underline">
             {row.contact}
           </a>
         </div>
-        <span className="font-mono shrink-0 text-[0.6rem] uppercase tracking-[0.14em] text-smoke">{fmtDate(row.created_at)}</span>
+        <span className="shrink-0 text-xs tabular-nums text-smoke">{fmtDate(row.created_at)}</span>
       </div>
-      {row.items && <p className="font-mono mt-2 text-sm text-char">{row.items}</p>}
+      {row.items && <p className="mt-2 text-sm text-char">{row.items}</p>}
       <label className="mt-3 flex min-h-11 items-center gap-3">
         <input type="checkbox" checked={contacted} onChange={(e) => toggle(e.target.checked)} className="size-5 accent-[var(--color-ember)]" />
-        <span className="font-mono text-xs uppercase tracking-[0.14em] text-navy">Contacted</span>
+        <span className="text-sm text-navy">Contacted</span>
       </label>
-    </div>
+    </Card>
   );
 }
 
@@ -262,14 +247,13 @@ function SignupsSection({ signups }: { signups: PreorderSignup[] }) {
   return (
     <div className="border-t border-navy/15 pt-6">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-display text-2xl font-extrabold uppercase leading-[0.95] text-navy">Signups</h2>
-        <button type="button" onClick={copyAll} disabled={signups.length === 0}
-          className="font-mono min-h-11 border border-navy/40 px-4 text-[0.65rem] uppercase tracking-[0.16em] text-navy hover:border-ember hover:text-ember disabled:opacity-40">
+        <h2 className="text-xl font-bold tracking-tight text-navy-deep">Signups</h2>
+        <Button type="button" variant="ghost" onClick={copyAll} disabled={signups.length === 0}>
           {copied ? "Copied!" : `Copy contacts (${signups.length})`}
-        </button>
+        </Button>
       </div>
       {signups.length === 0 ? (
-        <p className="font-mono mt-3 text-sm text-smoke">No pre-order signups yet.</p>
+        <p className="mt-3 text-sm text-smoke">No pre-order signups yet.</p>
       ) : (
         <div className="mt-3 flex flex-col gap-3">
           {signups.map((s) => <SignupCard key={s.id} row={s} />)}
@@ -290,14 +274,7 @@ export function PreorderManager({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
-          Pre-order pop-up
-        </h1>
-        <p className="mt-1 text-sm text-smoke">
-          The homepage pop-up. Turn it on, set the title, add up to {PREORDER_MAX_ITEMS} items.
-        </p>
-      </div>
+      <PageHeader title="Pre-order pop-up" />
       <EnableToggle enabled={config.enabled} />
       <TitleField title={config.title} />
       <ItemsSection items={items} />

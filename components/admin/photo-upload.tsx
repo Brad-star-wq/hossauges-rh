@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import imageCompression from "browser-image-compression";
 import { uploadPhoto } from "@/app/admin/actions";
 import { Placeholder } from "@/components/placeholder";
+import { Button, StatusLine } from "@/components/admin/ui";
 
 /**
  * Photo picker: compresses client-side (max 1600px, ~80% quality) then uploads
@@ -72,19 +73,15 @@ export function PhotoUpload({
         )}
       </div>
       <div className="flex flex-col gap-1">
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={() => inputRef.current?.click()}
           disabled={busy}
-          className="font-mono min-h-11 border border-navy/40 px-4 text-[0.65rem] uppercase tracking-[0.16em] text-navy transition-colors hover:border-ember hover:text-ember disabled:opacity-50"
         >
           {busy ? "Uploading…" : value ? "Replace photo" : "Upload photo"}
-        </button>
-        {error && (
-          <p role="alert" className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-ember">
-            {error}
-          </p>
-        )}
+        </Button>
+        <StatusLine result={error ? { ok: false, message: error } : null} />
         <input
           ref={inputRef}
           type="file"

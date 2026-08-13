@@ -10,11 +10,15 @@ import {
   moveGalleryItem,
 } from "@/app/admin/actions";
 import { PhotoUpload } from "@/components/admin/photo-upload";
+import {
+  PageHeader,
+  Label,
+  TextArea,
+  Button,
+  Card,
+  StatusLine,
+} from "@/components/admin/ui";
 import type { GalleryItem } from "@/lib/types";
-
-const labelCls = "font-mono block text-[0.65rem] uppercase tracking-[0.18em] text-navy";
-const fieldCls =
-  "mt-1 w-full border border-navy/30 bg-paper px-3 py-3 text-base text-char focus-visible:border-ember";
 
 function HeroField({
   contentKey,
@@ -40,8 +44,8 @@ function HeroField({
   }
 
   return (
-    <div className="border border-navy/20 bg-paper p-4">
-      <span className={labelCls}>{label}</span>
+    <Card>
+      <Label>{label}</Label>
       <div className="mt-2">
         <PhotoUpload
           folder="hero"
@@ -52,57 +56,50 @@ function HeroField({
         />
       </div>
       {url && (
-        <button
+        <Button
           type="button"
+          variant="danger"
           onClick={() => persist("")}
-          className="font-mono mt-3 text-[0.6rem] uppercase tracking-[0.14em] text-ember"
+          className="mt-3 border-0 px-0 hover:bg-transparent hover:text-ember"
         >
           Remove photo (use placeholder)
-        </button>
+        </Button>
       )}
-    </div>
+    </Card>
   );
 }
 
 function ParagraphField({ value }: { value: string }) {
   const router = useRouter();
   const [text, setText] = useState(value);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
 
   function save() {
-    setMsg(null);
+    setResult(null);
     start(async () => {
       const r = await saveSiteContent("about_paragraph", text);
-      setMsg(r.message);
+      setResult({ ok: r.ok, message: r.message });
       if (r.ok) router.refresh();
     });
   }
 
   return (
-    <div className="border border-navy/20 bg-paper p-4">
-      <label htmlFor="about-paragraph" className={labelCls}>
-        About story paragraph
-      </label>
-      <textarea
+    <Card>
+      <Label htmlFor="about-paragraph">About story paragraph</Label>
+      <TextArea
         id="about-paragraph"
         value={text}
         onChange={(e) => setText(e.target.value)}
-        rows={4}
-        className={fieldCls}
+        className="mt-1"
       />
       <div className="mt-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={save}
-          disabled={pending}
-          className="font-mono min-h-11 bg-ember-press px-4 text-[0.65rem] uppercase tracking-[0.16em] text-cream hover:bg-navy disabled:opacity-60"
-        >
+        <Button type="button" variant="primary" onClick={save} disabled={pending}>
           {pending ? "Saving…" : "Save text"}
-        </button>
-        {msg && <span className="font-mono text-[0.6rem] uppercase tracking-[0.12em] text-smoke">{msg}</span>}
+        </Button>
+        <StatusLine result={result} />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -134,15 +131,13 @@ function GalleryCard({ item, first, last }: { item: GalleryItem; first: boolean;
           <img src={item.url} alt="" className="aspect-square w-full object-cover" />
         )}
       </div>
-      <span className="font-mono flex-1 text-[0.6rem] uppercase tracking-[0.14em] text-smoke">
-        {item.type}
-      </span>
+      <span className="flex-1 text-xs text-smoke">{item.type}</span>
       <button type="button" onClick={() => move("up")} disabled={pending || first} aria-label="Move up"
-        className="font-mono min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↑</button>
+        className="min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↑</button>
       <button type="button" onClick={() => move("down")} disabled={pending || last} aria-label="Move down"
-        className="font-mono min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↓</button>
+        className="min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↓</button>
       <button type="button" onClick={remove} disabled={pending} aria-label="Delete"
-        className="font-mono min-h-9 border border-ember/50 px-2 text-ember hover:bg-ember hover:text-cream disabled:opacity-50">✕</button>
+        className="min-h-9 border border-ember/50 px-2 text-ember hover:bg-ember hover:text-cream disabled:opacity-50">✕</button>
     </li>
   );
 }
@@ -184,23 +179,18 @@ function GallerySection({ items }: { items: GalleryItem[] }) {
   }
 
   return (
-    <div className="border border-navy/20 bg-paper p-4">
+    <Card>
       <div className="flex items-center justify-between gap-3">
-        <span className={labelCls}>Gallery items (photos &amp; videos)</span>
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-          className="font-mono min-h-11 bg-ember-press px-4 text-[0.65rem] uppercase tracking-[0.16em] text-cream hover:bg-navy disabled:opacity-60"
-        >
+        <Label>Gallery items (photos &amp; videos)</Label>
+        <Button type="button" variant="primary" onClick={() => inputRef.current?.click()} disabled={busy}>
           {busy ? "Uploading…" : "+ Add media"}
-        </button>
+        </Button>
         <input ref={inputRef} type="file" accept="image/*,video/*" onChange={onPick} className="hidden" />
       </div>
-      {err && <p role="alert" className="font-mono mt-2 text-[0.6rem] uppercase tracking-[0.12em] text-ember">{err}</p>}
+      <StatusLine result={err ? { ok: false, message: err } : null} className="mt-2" />
 
       {items.length === 0 ? (
-        <p className="font-mono mt-4 text-sm text-smoke">
+        <p className="mt-4 text-sm text-smoke">
           No gallery items yet — add your first photo or video.
         </p>
       ) : (
@@ -210,7 +200,7 @@ function GallerySection({ items }: { items: GalleryItem[] }) {
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -228,15 +218,7 @@ export function GalleryManager({
 }) {
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
-          Gallery &amp; Content
-        </h1>
-        <p className="mt-1 text-sm text-smoke">
-          Photos, the About story, and the homepage hero. (Text lives in the{" "}
-          <span className="font-mono">Site Text</span> tab.)
-        </p>
-      </div>
+      <PageHeader title="Gallery & Content" />
 
       <HeroField contentKey="home_hero_url" label="Home hero photo" value={content.home_hero_url} />
       <HeroField

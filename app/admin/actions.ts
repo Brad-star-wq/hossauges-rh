@@ -494,6 +494,68 @@ export async function markContacted(id: string, contacted: boolean): Promise<Act
   }
 }
 
+/**
+ * Set how many packs of a reservation line (interest_items row) are paid.
+ * paidCount is clamped server-side to 0…quantity from the row's own quantity —
+ * the client value is never trusted, so the CHECK constraint can't be tripped.
+ */
+export async function setPacksPaid(itemId: string, paidCount: number): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: row, error: readErr } = await supabaseAdmin
+      .from("interest_items")
+      .select("quantity")
+      .eq("id", itemId)
+      .maybeSingle();
+    if (readErr) throw readErr;
+    if (!row) return { ok: false, message: "That reservation line no longer exists." };
+
+    const clamped = Math.max(0, Math.min(Math.trunc(paidCount), row.quantity as number));
+    const { error } = await supabaseAdmin
+      .from("interest_items")
+      .update({ paid_count: clamped })
+      .eq("id", itemId);
+    if (error) throw error;
+
+    revalidatePath("/admin/submissions");
+    return { ok: true, message: "Saved." };
+  } catch (err) {
+    console.error("[setPacksPaid]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
+  }
+}
+
+/**
+ * Settle (or un-settle) a whole order in one click. Each line's paid_count is
+ * set to its OWN quantity when paid, or 0 when not — we never write a value the
+ * row's quantity doesn't support, so the range check can't be tripped.
+ */
+export async function setOrderPaid(submissionId: string, paid: boolean): Promise<ActionResult> {
+  if (!(await isAdmin())) return DENIED;
+  try {
+    const { data: rows, error: readErr } = await supabaseAdmin
+      .from("interest_items")
+      .select("id, quantity")
+      .eq("submission_id", submissionId);
+    if (readErr) throw readErr;
+    if (!rows || rows.length === 0) return { ok: false, message: "No packs to update." };
+
+    for (const r of rows) {
+      const { error } = await supabaseAdmin
+        .from("interest_items")
+        .update({ paid_count: paid ? (r.quantity as number) : 0 })
+        .eq("id", r.id);
+      if (error) throw error;
+    }
+
+    revalidatePath("/admin/submissions");
+    return { ok: true, message: paid ? "Marked paid." : "Marked unpaid." };
+  } catch (err) {
+    console.error("[setOrderPaid]", err);
+    return { ok: false, message: err instanceof Error ? err.message : "Couldn't update. Try again." };
+  }
+}
+
 // ── Pre-order pop-up (separate from the batch system) ─────────────────────────
 
 function revalidateHome() {

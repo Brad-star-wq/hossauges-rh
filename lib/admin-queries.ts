@@ -75,7 +75,15 @@ export async function getFlavorPhotos(
   return out;
 }
 
-export type SubmissionItem = { flavor_name: string; quantity: number };
+export type SubmissionItem = {
+  /** Stable per-line id so the UI can target one line's packs. Null for a
+   *  legacy single-flavor row synthesized from the parent (no interest_items). */
+  id: string | null;
+  flavor_name: string;
+  quantity: number;
+  /** Packs of this line already paid (0…quantity). Legacy rows default to 0. */
+  paid_count: number;
+};
 
 export type SubmissionRow = {
   id: string;
@@ -87,6 +95,14 @@ export type SubmissionRow = {
   week_label: string | null;
   /** Per-flavor line items (Round 9). Old single-flavor rows yield one item. */
   items: SubmissionItem[];
+  /** True when the row has real interest_items rows (per-pack paid tracking is
+   *  possible). False for a synthesized legacy fallback: its payment state is
+   *  unknown and must never be guessed. */
+  trackable: boolean;
+  /** Packs across all lines. 0 when not trackable. Derived here, not in the component. */
+  totalPacks: number;
+  /** Packs paid across all lines. 0 when not trackable. Derived here, not in the component. */
+  paidPacks: number;
 };
 
 export async function getSubmissions(dropId?: string): Promise<SubmissionRow[]> {
@@ -122,24 +138,42 @@ export async function getSubmissions(dropId?: string): Promise<SubmissionRow[]> 
   if (parents.length > 0) {
     const { data: itemRows, error: itemErr } = await supabaseAdmin
       .from("interest_items")
-      .select("submission_id, flavor_name, quantity, created_at")
+      .select("id, submission_id, flavor_name, quantity, paid_count, created_at")
       .in("submission_id", parents.map((p) => p.id))
       .order("created_at", { ascending: true });
     if (!itemErr && itemRows) {
       for (const it of itemRows as unknown as {
+        id: string;
         submission_id: string;
         flavor_name: string;
         quantity: number;
+        paid_count: number;
       }[]) {
         const list = itemsBySubmission.get(it.submission_id) ?? [];
-        list.push({ flavor_name: it.flavor_name, quantity: it.quantity });
+        list.push({
+          id: it.id,
+          flavor_name: it.flavor_name,
+          quantity: it.quantity,
+          paid_count: it.paid_count ?? 0,
+        });
         itemsBySubmission.set(it.submission_id, list);
       }
     }
   }
 
   return parents.map((r) => {
-    const items = itemsBySubmission.get(r.id);
+    const found = itemsBySubmission.get(r.id);
+    const trackable = !!(found && found.length > 0);
+    const items: SubmissionItem[] = trackable
+      ? found!
+      : // Legacy single-flavor row → one synthesized line item. No
+        // interest_items row exists, so it has no id and no known paid state.
+        r.drop_flavors?.name && r.quantity != null
+        ? [{ id: null, flavor_name: r.drop_flavors.name, quantity: r.quantity, paid_count: 0 }]
+        : [];
+    // Packs only count when trackable — legacy payment state is unknown, not 0-of-N.
+    const totalPacks = trackable ? items.reduce((sum, it) => sum + it.quantity, 0) : 0;
+    const paidPacks = trackable ? items.reduce((sum, it) => sum + it.paid_count, 0) : 0;
     return {
       id: r.id,
       name: r.name,
@@ -148,15 +182,19 @@ export async function getSubmissions(dropId?: string): Promise<SubmissionRow[]> 
       created_at: r.created_at,
       drop_id: r.drop_id,
       week_label: r.drops?.week_label ?? null,
-      items:
-        items && items.length > 0
-          ? items
-          : // Legacy single-flavor row → one synthesized line item.
-            r.drop_flavors?.name && r.quantity != null
-            ? [{ flavor_name: r.drop_flavors.name, quantity: r.quantity }]
-            : [],
+      items,
+      trackable,
+      totalPacks,
+      paidPacks,
     };
   });
+}
+
+/** Orders with at least one unpaid pack — the nav "Reservations" badge count.
+ *  Only trackable orders count; legacy rows (unknown payment state) never do. */
+export async function getUnpaidOrderCount(): Promise<number> {
+  const rows = await getSubmissions();
+  return rows.filter((r) => r.trackable && r.paidPacks < r.totalPacks).length;
 }
 
 export type DropOption = { id: string; week_label: string; status: string };

@@ -7,6 +7,7 @@ import {
   deleteFlavorPhoto,
   moveFlavorPhoto,
 } from "@/app/admin/actions";
+import { Button, StatusLine } from "@/components/admin/ui";
 
 type Photo = { id: string; url: string };
 
@@ -28,13 +29,7 @@ export function FlavorPhotos({
   const [, start] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  if (!flavorId) {
-    return (
-      <p className="font-mono text-[0.6rem] uppercase tracking-[0.12em] text-smoke">
-        Save changes to add photos to this flavor.
-      </p>
-    );
-  }
+  if (!flavorId) return null;
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -105,29 +100,30 @@ export function FlavorPhotos({
                 <img src={photo.url} alt="" className="aspect-[4/3] w-full border border-navy/20 object-cover" />
               </div>
               {i === 0 && (
-                <span className="font-mono text-[0.55rem] uppercase tracking-[0.12em] text-ember">Cover</span>
+                <span className="text-xs text-smoke">Cover</span>
               )}
               <div className="ml-auto flex gap-1">
                 <button type="button" onClick={() => move(photo.id, "up")} disabled={i === 0} aria-label="Move photo up"
-                  className="font-mono min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↑</button>
+                  className="min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↑</button>
                 <button type="button" onClick={() => move(photo.id, "down")} disabled={i === photos.length - 1} aria-label="Move photo down"
-                  className="font-mono min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↓</button>
+                  className="min-h-9 border border-navy/40 px-2 text-navy disabled:opacity-30">↓</button>
                 <button type="button" onClick={() => remove(photo.id)} aria-label="Delete photo"
-                  className="font-mono min-h-9 border border-ember/50 px-2 text-ember hover:bg-ember hover:text-cream">✕</button>
+                  className="min-h-9 border border-ember/50 px-2 text-ember hover:bg-ember hover:text-cream">✕</button>
               </div>
             </li>
           ))}
         </ul>
       )}
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="font-mono min-h-11 self-start border border-navy/40 px-4 text-[0.65rem] uppercase tracking-[0.16em] text-navy transition-colors hover:border-ember hover:text-ember disabled:opacity-50"
+        className="self-start"
       >
         {busy ? "Uploading…" : photos.length ? "+ Add another photo" : "+ Add photo"}
-      </button>
-      {err && <p role="alert" className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-ember">{err}</p>}
+      </Button>
+      <StatusLine result={err ? { ok: false, message: err } : null} />
       <input ref={inputRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
     </div>
   );

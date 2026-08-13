@@ -11,6 +11,16 @@ import {
 import { FlavorPhotos } from "@/components/admin/flavor-photos";
 import { type Drop, type MeatType } from "@/lib/types";
 import { cn } from "@/lib/cn";
+import {
+  PageHeader,
+  Label,
+  Field,
+  TextArea,
+  Select,
+  Button,
+  Toggle,
+  StatusLine,
+} from "@/components/admin/ui";
 
 type EditFlavor = {
   key: string; // stable React key (db id, or a fresh id for unsaved flavors)
@@ -147,185 +157,145 @@ export function DropEditor({
     });
   }
 
-  const labelCls = "font-mono block text-[0.65rem] uppercase tracking-[0.18em] text-navy";
-  const fieldCls =
-    "mt-1 w-full border border-navy/30 bg-paper px-3 py-3 text-base text-char focus-visible:border-ember";
-
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
-          This week&apos;s batch
-        </h1>
-        <p className="mt-1 text-sm text-smoke">
-          {flavors.length} flavor{flavors.length === 1 ? "" : "s"}. Edit, add, or remove — then Save changes.
-        </p>
-      </div>
+      <PageHeader title="This week's batch" />
 
       {/* Week label */}
       <div>
-        <label htmlFor="week-label" className={labelCls}>
-          Week label
-        </label>
-        <input
+        <Label htmlFor="week-label">Week label</Label>
+        <Field
           id="week-label"
           value={weekLabel}
           onChange={(e) => setWeekLabel(e.target.value)}
           placeholder="WEEK OF JUNE 9"
-          className={fieldCls}
+          className="mt-1"
         />
       </div>
 
       {/* Flavors */}
       {flavors.map((f, i) => (
         <fieldset key={f.key} className="border border-navy/20 bg-paper p-4">
-          <legend className="font-mono px-2 text-[0.65rem] uppercase tracking-[0.18em] text-ember">
-            Flavor {i + 1}
-          </legend>
+            <legend className="px-2 text-xs text-smoke">Flavor {i + 1}</legend>
 
-          <div className="flex flex-col gap-4">
-            <div>
-              <label htmlFor={`name-${f.key}`} className={labelCls}>
-                Name
-              </label>
-              <input
-                id={`name-${f.key}`}
-                value={f.name}
-                onChange={(e) => patch(i, { name: e.target.value })}
-                className={fieldCls}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-4">
               <div>
-                <label htmlFor={`meat-${f.key}`} className={labelCls}>
-                  Meat type
-                </label>
-                <select
-                  id={`meat-${f.key}`}
-                  value={f.meat_type}
-                  onChange={(e) => patch(i, { meat_type: e.target.value as MeatType })}
-                  className={cn(fieldCls, "appearance-none")}
-                >
-                  <option value="pork">100% Pork</option>
-                  <option value="beef_pork">Beef &amp; Pork</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor={`price-${f.key}`} className={labelCls}>
-                  Price / 3-pack ($)
-                </label>
-                <input
-                  id={`price-${f.key}`}
-                  inputMode="decimal"
-                  value={f.priceDollars}
-                  onChange={(e) => patch(i, { priceDollars: e.target.value })}
-                  placeholder="18"
-                  className={fieldCls}
+                <Label htmlFor={`name-${f.key}`}>Name</Label>
+                <Field
+                  id={`name-${f.key}`}
+                  value={f.name}
+                  onChange={(e) => patch(i, { name: e.target.value })}
+                  className="mt-1"
                 />
               </div>
-            </div>
 
-            <div>
-              <label htmlFor={`desc-${f.key}`} className={labelCls}>
-                Description
-              </label>
-              <textarea
-                id={`desc-${f.key}`}
-                value={f.description}
-                onChange={(e) => patch(i, { description: e.target.value })}
-                rows={2}
-                className={fieldCls}
-              />
-            </div>
-
-            <div>
-              <span className={labelCls}>Photos</span>
-              <div className="mt-1">
-                <FlavorPhotos flavorId={f.id} initial={photosByFlavor[f.id] ?? []} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor={`meat-${f.key}`}>Meat type</Label>
+                  <Select
+                    id={`meat-${f.key}`}
+                    value={f.meat_type}
+                    onChange={(e) => patch(i, { meat_type: e.target.value as MeatType })}
+                    className="mt-1"
+                  >
+                    <option value="pork">100% Pork</option>
+                    <option value="beef_pork">Beef &amp; Pork</option>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor={`price-${f.key}`}>Price / 3-pack ($)</Label>
+                  <Field
+                    id={`price-${f.key}`}
+                    inputMode="decimal"
+                    value={f.priceDollars}
+                    onChange={(e) => patch(i, { priceDollars: e.target.value })}
+                    placeholder="18"
+                    className="mt-1 tabular-nums"
+                  />
+                </div>
               </div>
-            </div>
 
-            {/* Sold-out big toggle with stamp preview */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={f.sold_out}
-              onClick={() => patch(i, { sold_out: !f.sold_out })}
-              className={cn(
-                "flex min-h-12 items-center justify-between border-2 px-4 transition-colors",
-                f.sold_out ? "border-ember bg-ember/10" : "border-navy/30 bg-paper",
-              )}
-            >
-              <span className="font-mono text-xs uppercase tracking-[0.16em] text-navy">
-                {f.sold_out ? "Sold out" : "Available"}
-              </span>
-              <span
-                className={cn(
-                  "font-display border-2 px-3 py-0.5 text-sm font-extrabold uppercase tracking-[0.1em]",
-                  f.sold_out
-                    ? "rotate-[-6deg] border-ember text-ember"
-                    : "border-navy/20 text-navy/30",
-                )}
+              <div>
+                <Label htmlFor={`desc-${f.key}`}>Description</Label>
+                <TextArea
+                  id={`desc-${f.key}`}
+                  value={f.description}
+                  onChange={(e) => patch(i, { description: e.target.value })}
+                  className="mt-1"
+                />
+              </div>
+
+              <div>
+                <Label>Photos</Label>
+                <div className="mt-1">
+                  <FlavorPhotos flavorId={f.id} initial={photosByFlavor[f.id] ?? []} />
+                </div>
+              </div>
+
+              {/* Sold-out big toggle with stamp preview */}
+              <Toggle checked={f.sold_out} onChange={(next) => patch(i, { sold_out: next })}>
+                <span className="text-sm text-navy">
+                  {f.sold_out ? "Sold out" : "Available"}
+                </span>
+                <span
+                  className={cn(
+                    "border-2 px-3 py-0.5 text-sm font-bold uppercase tracking-[0.1em]",
+                    f.sold_out
+                      ? "rotate-[-6deg] border-ember text-ember"
+                      : "border-navy/20 text-navy/30",
+                  )}
+                >
+                  Sold out
+                </span>
+              </Toggle>
+
+              {/* Remove flavor */}
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => removeFlavor(i)}
+                disabled={flavors.length <= 1}
+                className="self-start border-0 px-0 hover:bg-transparent hover:text-ember disabled:opacity-30"
               >
-                Sold out
-              </span>
-            </button>
-
-            {/* Remove flavor */}
-            <button
-              type="button"
-              onClick={() => removeFlavor(i)}
-              disabled={flavors.length <= 1}
-              className="font-mono self-start text-[0.6rem] uppercase tracking-[0.14em] text-ember disabled:opacity-30"
-            >
-              Remove flavor
-            </button>
-          </div>
+                Remove flavor
+              </Button>
+            </div>
         </fieldset>
       ))}
 
       {/* Add flavor */}
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={addFlavor}
         disabled={adding}
-        className="font-mono min-h-12 w-full border-2 border-dashed border-navy/40 px-6 py-4 text-xs uppercase tracking-[0.18em] text-navy transition-colors hover:border-ember hover:text-ember disabled:opacity-50"
+        className="min-h-12 w-full border-2 border-dashed py-4"
       >
         {adding ? "Adding…" : "+ Add flavor"}
-      </button>
+      </Button>
 
-      {result && (
-        <p
-          role="status"
-          className={cn(
-            "font-mono border px-4 py-3 text-xs uppercase tracking-[0.12em]",
-            result.ok ? "border-navy/30 text-navy" : "border-ember text-ember",
-          )}
-        >
-          {result.ok ? "★ " : ""}
-          {result.message}
-        </p>
-      )}
+      <StatusLine result={result} />
 
       {/* Actions */}
       <div className="flex flex-col gap-3">
-        <button
+        <Button
           type="button"
+          variant="primary"
           onClick={onSave}
           disabled={saving}
-          className="font-mono min-h-12 w-full bg-ember-press px-6 py-4 text-xs uppercase tracking-[0.18em] text-cream transition-colors hover:bg-navy disabled:opacity-60"
+          className="min-h-12 w-full py-4"
         >
           {saving ? "Saving…" : "Save changes"}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="secondary"
           onClick={onPublish}
           disabled={publishing}
-          className="font-mono min-h-12 w-full border-2 border-navy px-6 py-4 text-xs uppercase tracking-[0.18em] text-navy transition-colors hover:bg-navy hover:text-cream disabled:opacity-60"
+          className="min-h-12 w-full py-4"
         >
           {publishing ? "Publishing…" : "Publish new batch"}
-        </button>
+        </Button>
       </div>
     </div>
   );

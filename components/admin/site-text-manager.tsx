@@ -4,6 +4,15 @@ import { useMemo, useState, useTransition } from "react";
 import { saveSiteText } from "@/app/admin/actions";
 import { cn } from "@/lib/cn";
 import {
+  PageHeader,
+  Label,
+  Field,
+  TextArea,
+  Button,
+  Toggle,
+  StatusLine,
+} from "@/components/admin/ui";
+import {
   SITE_TEXT_DEFAULTS,
   SITE_TEXT_FIELDS,
   ANNOUNCEMENT_ON,
@@ -11,10 +20,6 @@ import {
   type SiteTextField,
   type SiteTextGroup,
 } from "@/lib/site-text";
-
-const labelCls = "font-mono block text-[0.65rem] uppercase tracking-[0.18em] text-navy";
-const fieldCls =
-  "mt-1 w-full border border-navy/30 bg-paper px-3 py-3 text-base text-char focus-visible:border-ember";
 
 const GROUP_ORDER: SiteTextGroup[] = ["Home", "Batch", "About", "Footer", "Announcement"];
 
@@ -64,20 +69,11 @@ export function SiteTextManager({ values }: { values: SiteText }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
-          Site Text
-        </h1>
-        <p className="font-mono mt-2 text-[0.65rem] uppercase tracking-[0.14em] text-smoke">
-          Edit the words on the site. Leave a field blank to use the built-in default.
-        </p>
-      </div>
+      <PageHeader title="Site Text" />
 
       {grouped.map(({ group, fields }) => (
         <section key={group} className="border-2 border-navy bg-paper p-4">
-          <h2 className="font-display text-lg font-bold uppercase leading-tight text-navy">
-            {group}
-          </h2>
+          <h2 className="text-base font-bold text-navy-deep">{group}</h2>
           <div className="mt-4 flex flex-col gap-5">
             {fields.map((field) => {
               const value = form[field.key] ?? "";
@@ -87,27 +83,17 @@ export function SiteTextManager({ values }: { values: SiteText }) {
                 const on = value === ANNOUNCEMENT_ON;
                 return (
                   <div key={field.key}>
-                    <span className={labelCls}>{field.label}</span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={on}
-                      onClick={() => set(field.key, on ? "" : ANNOUNCEMENT_ON)}
-                      className={cn(
-                        "mt-1 flex min-h-12 w-full items-center justify-between border-2 px-4 transition-colors",
-                        on ? "border-ember bg-ember/10" : "border-navy/30 bg-paper",
-                      )}
+                    <Label>{field.label}</Label>
+                    <Toggle
+                      checked={on}
+                      onChange={(next) => set(field.key, next ? ANNOUNCEMENT_ON : "")}
+                      className="mt-1"
                     >
-                      <span className="font-mono text-xs uppercase tracking-[0.16em] text-navy">
+                      <span className="text-sm text-navy">
                         {on ? "On — bar is showing" : "Off — bar hidden"}
                       </span>
-                      <span className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-smoke">
-                        tap to {on ? "hide" : "show"}
-                      </span>
-                    </button>
-                    <p className="font-mono mt-1 text-[0.6rem] uppercase tracking-[0.1em] text-smoke">
-                      {field.where}
-                    </p>
+                      <span className="text-xs text-smoke">tap to {on ? "hide" : "show"}</span>
+                    </Toggle>
                   </div>
                 );
               }
@@ -115,43 +101,32 @@ export function SiteTextManager({ values }: { values: SiteText }) {
               const over = field.softMax != null && value.length > field.softMax;
               return (
                 <div key={field.key}>
-                  <label className={labelCls} htmlFor={`st-${field.key}`}>
-                    {field.label}
-                  </label>
+                  <Label htmlFor={`st-${field.key}`}>{field.label}</Label>
                   {field.control === "textarea" ? (
-                    <textarea
+                    <TextArea
                       id={`st-${field.key}`}
                       value={value}
                       onChange={(e) => set(field.key, e.target.value)}
                       placeholder={placeholderFor(field)}
-                      rows={4}
-                      className={cn(fieldCls, "resize-y")}
+                      className="mt-1"
                     />
                   ) : (
-                    <input
+                    <Field
                       id={`st-${field.key}`}
                       value={value}
                       onChange={(e) => set(field.key, e.target.value)}
                       placeholder={placeholderFor(field)}
-                      className={fieldCls}
+                      className="mt-1"
                     />
                   )}
-                  <div className="mt-1 flex items-center justify-between gap-3">
-                    <p className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-smoke">
-                      {field.where}
-                    </p>
-                    {field.softMax != null && (
-                      <span
-                        className={cn(
-                          "font-mono text-[0.6rem] tabular-nums",
-                          over ? "text-ember" : "text-smoke",
-                        )}
-                      >
+                  {field.softMax != null && (
+                    <div className="mt-1 flex justify-end">
+                      <span className={cn("text-xs tabular-nums", over ? "text-ember" : "text-smoke")}>
                         {value.length}/{field.softMax}
                         {over ? " · may overflow" : ""}
                       </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -159,29 +134,19 @@ export function SiteTextManager({ values }: { values: SiteText }) {
         </section>
       ))}
 
-      {result && (
-        <p
-          role={result.ok ? "status" : "alert"}
-          className={cn(
-            "font-mono text-xs uppercase tracking-[0.12em]",
-            result.ok ? "text-navy" : "text-ember",
-          )}
-        >
-          {result.ok ? "★ " : ""}
-          {result.message}
-        </p>
-      )}
+      <StatusLine result={result} />
 
       {/* Sticky save so it's always reachable on a phone. */}
       <div className="sticky bottom-4 z-10">
-        <button
+        <Button
           type="button"
+          variant="primary"
           onClick={onSave}
           disabled={pending}
-          className="font-mono min-h-12 w-full bg-ember px-4 py-3 text-xs uppercase tracking-[0.18em] text-cream shadow-[4px_4px_0_0_var(--color-navy)] transition-colors hover:bg-navy disabled:opacity-60"
+          className="min-h-12 w-full py-3 shadow-[4px_4px_0_0_var(--color-navy)]"
         >
           {pending ? "Saving…" : "Save all changes"}
-        </button>
+        </Button>
       </div>
     </div>
   );

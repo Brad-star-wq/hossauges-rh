@@ -1,5 +1,6 @@
 import { DropEditor } from "@/components/admin/drop-editor";
 import { PublishFirstDrop } from "@/components/admin/publish-first-drop";
+import { PageHeader } from "@/components/admin/ui";
 import { getActiveDropAdmin, getFlavorPhotos } from "@/lib/admin-queries";
 
 export default async function AdminDropPage() {
@@ -9,9 +10,7 @@ export default async function AdminDropPage() {
     return (
       <div className="flex flex-col gap-5">
         <div>
-          <h1 className="font-display text-3xl font-extrabold uppercase leading-[0.95] text-navy">
-            No active drop
-          </h1>
+          <PageHeader title="No active drop" />
           <p className="mt-2 text-sm text-smoke">
             Publish a fresh drop to get two flavor slots you can fill in.
           </p>

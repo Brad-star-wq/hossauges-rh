@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { isAdmin } from "@/lib/admin-session";
+import { getUnpaidOrderCount } from "@/lib/admin-queries";
 
 export const metadata: Metadata = {
   title: "Admin",
@@ -19,9 +20,11 @@ export default async function AdminLayout({
   // Defense-in-depth: middleware already guards, but re-check here too.
   if (!(await isAdmin())) redirect("/admin/login");
 
+  const unpaidCount = await getUnpaidOrderCount();
+
   return (
-    <div className="min-h-svh bg-cream">
-      <AdminNav />
+    <div className="min-h-svh bg-cream min-[840px]:pl-[186px]">
+      <AdminNav unpaidCount={unpaidCount} />
       <main className="mx-auto max-w-3xl px-4 py-6 pb-24">{children}</main>
     </div>
   );
